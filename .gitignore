@@ -15,7 +15,7 @@ data/outputs/*
 !data/outputs/.gitkeep
 dataset/*
 !dataset/.gitkeep
-evaluation/
+/evaluation/
 TRANSFER-MANIFEST.json
 models/*
 !models/README.md
