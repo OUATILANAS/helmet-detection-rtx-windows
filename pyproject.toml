@@ -1,0 +1,41 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "helmet-rider-detection"
+version = "0.1.0"
+description = "Rider-only helmet detection for edge devices"
+requires-python = ">=3.10"
+dependencies = [
+  "numpy>=1.26,<2",
+  "opencv-python>=4.8,<4.12",
+  "PyYAML>=6.0",
+  "Pillow>=10",
+  "fastapi>=0.110",
+  "uvicorn[standard]>=0.27",
+  "python-multipart>=0.0.9",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=8", "ruff>=0.5"]
+ultralytics = ["ultralytics>=8.4"]
+onnx = ["onnx>=1.15", "onnxruntime>=1.17"]
+onnxruntime = ["onnxruntime>=1.17"]
+tracking = ["ultralytics>=8.4.171", "scipy>=1.10", "lap>=0.5.12"]
+export = ["ultralytics>=8.4", "onnx>=1.15", "onnxruntime>=1.17"]
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B"]
+ignore = ["E501"]

@@ -1,0 +1,79 @@
+detector:
+  model: models/yolo26n.pt
+  motorcycle_model: models/trafficai_motorbike.pt
+  confidence: 0.08
+  image_size: 1280
+  device: '0'
+  backend: ultralytics
+  augment: true
+  nms_iou: 0.55
+  motorcycle_confidence: 0.04
+  motorcycle_nms_iou: 0.45
+  motorcycle_unassociated_confidence: 0.6
+  motorcycle_gap_model: models/visdrone-yolo11s.pt
+  motorcycle_gap_confidence: 0.045
+  motorcycle_gap_image_size: 640
+  motorcycle_gap_min_area: 800
+  motorcycle_gap_max_existing: 24
+  helmet_model: models/safety_helmet_yolov8.pt
+  helmet_confidence: 0.002
+  helmet_min_positive_confidence: 0.35
+  helmet_min_person_confidence: 0.1
+  helmet_min_confidence_for_weak_person: 0.02
+  helmet_nms_iou: 0.45
+  helmet_tile_grid: 2
+  helmet_tile_overlap: 0.2
+  helmet_tile_confidence: 0.005
+  every_n_frames: 1
+classifier:
+  model: models/helmet_head_edgevision.pt
+  headwear_model: models/helmet_head_headwear_20261010.pt
+  verify_small_heads: true
+  backend: efficientnet_b0
+  device: cpu
+  input_size: 224
+  min_confidence: 0.55
+  helmet_positive_threshold: 0.55
+  no_helmet_negative_threshold: 0.75
+  helmet_crop_positive_threshold: 0.75
+  every_n_frames: 3
+  localized_refinement_model: models/helmet_head_video_20261010.pt
+  localized_refinement_threshold: 0.55
+  localized_head_model: models/helmet_localizer_video_20261010.pt
+  localized_native_threshold: 0.5
+  localized_relocalize_known: true
+  localized_verify_conflicts: true
+  localized_head_tile_grid: 4
+  localized_adaptive_tiles: true
+  localized_prefer_consensus: true
+  localized_verify_known: true
+  localized_occlusion_tolerant: true
+association:
+  threshold: 0.34
+  lower_body_ratio: 0.42
+  vehicle_expand_x: 0.22
+  vehicle_expand_y: 0.12
+  minimum_lower_body_overlap: 0.08
+head_roi:
+  strategy: verified
+  height_ratio: 0.25
+  width_expansion: 0.95
+  minimum_size: 8
+tracking:
+  enabled: true
+  iou_threshold: 0.12
+  max_age: 12
+  smoothing_window: 5
+  bbox_smoothing: 0.62
+camera:
+  source: webcam
+  width: 1920
+  height: 1080
+  fps: 25
+  frame_skip: 0
+visualization:
+  debug: false
+  show_association_lines: false
+performance:
+  inference_threads: 2
+  measure_memory: false

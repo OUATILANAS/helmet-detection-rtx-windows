@@ -1,0 +1,5 @@
+# Install CUDA torch/torchvision FIRST using windows/setup.ps1.
+-e .[dev,tracking]
+ultralytics==8.4.171
+psutil>=5.9,<8
+httpx>=0.28,<1

@@ -1,0 +1,2223 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#07131f">
+  <title>Helmet Rider Detection</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --page: #07131f;
+      --surface: #0d1d2a;
+      --surface-raised: #122737;
+      --surface-soft: #102331;
+      --line: #1c3546;
+      --muted: #8ba0ae;
+      --text: #f1f5f2;
+      --lime: #c7f36b;
+      --lime-ink: #15210c;
+      --cyan: #73d6d2;
+      --amber: #f5bd69;
+      --red: #ff8585;
+      font: 15px/1.5 Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      color: var(--text);
+      background: var(--page);
+    }
+    * { box-sizing: border-box; }
+    [hidden] { display: none !important; }
+    body {
+      min-width: 320px;
+      min-height: 100vh;
+      margin: 0;
+      background:
+        radial-gradient(ellipse at 78% -20%, rgba(57, 107, 117, .22), transparent 38rem),
+        radial-gradient(ellipse at 0% 60%, rgba(81, 112, 56, .08), transparent 34rem),
+        var(--page);
+    }
+    button, input, select { font: inherit; }
+    button { cursor: pointer; }
+    button:disabled { cursor: not-allowed; opacity: .45; }
+    .topbar {
+      height: 74px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 max(24px, calc((100vw - 1380px) / 2));
+      border-bottom: 1px solid rgba(140, 172, 186, .14);
+      background: rgba(7, 19, 31, .78);
+    }
+    .brand { display: flex; align-items: center; gap: 12px; }
+    .brand-mark {
+      width: 38px;
+      height: 38px;
+      display: grid;
+      place-items: center;
+      border: 1px solid rgba(199, 243, 107, .35);
+      border-radius: 12px;
+      color: var(--lime);
+      background: rgba(199, 243, 107, .08);
+    }
+    .brand-name { font-size: .96rem; font-weight: 680; letter-spacing: .015em; }
+    .brand-caption { color: var(--muted); font-size: .72rem; letter-spacing: .12em; text-transform: uppercase; }
+    .topbar-right { display: flex; align-items: center; gap: 10px; }
+    .status-pill, .model-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      min-height: 32px;
+      padding: 5px 11px;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      color: #bed0d8;
+      background: rgba(13, 29, 42, .85);
+      font-size: .78rem;
+      white-space: nowrap;
+    }
+    .status-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--cyan); box-shadow: 0 0 12px rgba(115, 214, 210, .58); }
+    .status-pill.offline .status-dot { background: var(--red); box-shadow: none; }
+    .model-pill .status-dot { background: var(--amber); box-shadow: none; }
+    .shell { width: min(1380px, 100%); margin: auto; padding: 42px 24px 32px; }
+    .intro { display: flex; align-items: end; justify-content: space-between; gap: 28px; margin-bottom: 27px; }
+    .eyebrow { display: flex; align-items: center; gap: 9px; color: var(--lime); font-size: .72rem; font-weight: 700; letter-spacing: .15em; text-transform: uppercase; }
+    .eyebrow-mark { width: 18px; height: 1px; background: var(--lime); }
+    h1 { max-width: 700px; margin: 10px 0 8px; font-size: clamp(2rem, 4vw, 3.15rem); line-height: 1.06; letter-spacing: -.055em; font-weight: 620; }
+    h1 em { color: var(--lime); font-style: normal; }
+    .intro p { max-width: 660px; margin: 0; color: #9cafba; font-size: .97rem; }
+    .intro-note { display: flex; align-items: center; gap: 10px; margin-bottom: 4px; color: #b6c8cd; font-size: .81rem; white-space: nowrap; }
+    .intro-note svg { color: var(--cyan); }
+    .layout { display: grid; grid-template-columns: minmax(0, 1fr) 320px; gap: 18px; align-items: start; }
+    .card { border: 1px solid var(--line); border-radius: 18px; background: linear-gradient(145deg, rgba(15, 32, 46, .97), rgba(10, 24, 36, .98)); box-shadow: 0 18px 55px rgba(0, 0, 0, .15); }
+    .studio { overflow: hidden; }
+    .studio-head { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 16px 18px; border-bottom: 1px solid var(--line); }
+    .mode-tabs { display: inline-flex; flex-wrap: wrap; gap: 5px; padding: 4px; border: 1px solid #203a4b; border-radius: 11px; background: #091923; }
+    .mode-tab { display: inline-flex; align-items: center; gap: 8px; border: 0; border-radius: 8px; padding: 9px 13px; color: #91a7b4; background: transparent; font-size: .85rem; font-weight: 600; }
+    .mode-tab svg { width: 16px; height: 16px; }
+    .mode-tab[aria-selected="true"] { color: var(--text); background: #1b3546; box-shadow: inset 0 0 0 1px rgba(141, 182, 195, .13); }
+    .studio-caption { display: flex; align-items: center; gap: 7px; color: #7f97a4; font-size: .75rem; }
+    .workspace { padding: 18px; }
+    .toolbar { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 14px; }
+    .toolbar-group { display: flex; flex-wrap: wrap; align-items: center; gap: 9px; }
+    .field-label { color: #9aafbb; font-size: .8rem; font-weight: 600; }
+    select {
+      min-height: 39px;
+      max-width: 100%;
+      padding: 7px 34px 7px 11px;
+      border: 1px solid #294353;
+      border-radius: 9px;
+      outline: none;
+      color: #dce6e8;
+      background: #0a1a26;
+    }
+    select:focus, button:focus-visible, input:focus-visible, label:focus-visible { outline: 2px solid var(--cyan); outline-offset: 2px; }
+    .button {
+      min-height: 39px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      padding: 8px 13px;
+      border: 1px solid #294353;
+      border-radius: 9px;
+      color: #d8e3e5;
+      background: #142a3a;
+      font-size: .82rem;
+      font-weight: 620;
+      transition: transform .16s ease, background .16s ease, border-color .16s ease;
+    }
+    .button:hover:not(:disabled) { transform: translateY(-1px); border-color: #4a6a78; background: #193448; }
+    .button svg { width: 16px; height: 16px; }
+    .button.primary { border-color: var(--lime); color: var(--lime-ink); background: var(--lime); }
+    .button.primary:hover:not(:disabled) { border-color: #d8ffa0; background: #d8ffa0; }
+    .button.quiet { color: #9db1bb; background: transparent; }
+    .button.danger { color: #ffb4b4; border-color: #603b43; background: rgba(91, 35, 45, .3); }
+    .stage {
+      position: relative;
+      min-height: 430px;
+      overflow: hidden;
+      display: grid;
+      place-items: center;
+      border: 1px solid #1a3547;
+      border-radius: 13px;
+      background-color: #08141e;
+      background-image: linear-gradient(rgba(106, 152, 166, .055) 1px, transparent 1px), linear-gradient(90deg, rgba(106, 152, 166, .055) 1px, transparent 1px), radial-gradient(ellipse at 50% 55%, #112836 0%, #0a1822 54%, #07121b 100%);
+      background-size: 36px 36px, 36px 36px, auto;
+    }
+    .stage::after { content: ""; position: absolute; z-index: 1; inset: 0; pointer-events: none; background: linear-gradient(180deg, rgba(7, 19, 31, .04), transparent 28%, transparent 70%, rgba(7, 19, 31, .42)); }
+    .stage video, .stage img.feed { width: 100%; height: 100%; position: absolute; z-index: 0; inset: 0; object-fit: contain; background: #07121b; }
+    .stage img.feed { object-fit: contain; }
+    .stage canvas.live-overlay { width: 100%; height: 100%; position: absolute; z-index: 2; inset: 0; object-fit: contain; pointer-events: none; }
+    .stage-empty { z-index: 2; max-width: 350px; padding: 28px; text-align: center; color: #94aab5; }
+    .stage-icon { width: 58px; height: 58px; display: grid; place-items: center; margin: 0 auto 16px; border: 1px solid #294656; border-radius: 17px; color: var(--cyan); background: rgba(115, 214, 210, .07); }
+    .stage-icon svg { width: 25px; height: 25px; }
+    .stage-empty strong { display: block; margin-bottom: 5px; color: #dae5e5; font-size: 1rem; font-weight: 620; }
+    .stage-empty span { display: block; font-size: .82rem; }
+    .stage-hud { position: absolute; z-index: 3; top: 13px; left: 13px; right: 13px; display: flex; justify-content: space-between; pointer-events: none; }
+    .hud-chip { display: inline-flex; align-items: center; gap: 7px; padding: 5px 9px; border: 1px solid rgba(145, 176, 188, .23); border-radius: 7px; color: #d5e2e3; background: rgba(5, 17, 26, .7); backdrop-filter: blur(8px); font-size: .68rem; font-weight: 680; letter-spacing: .1em; text-transform: uppercase; }
+    .hud-chip.live { color: #d6ff89; }
+    .hud-chip.live .status-dot { background: var(--lime); box-shadow: 0 0 10px rgba(199, 243, 107, .72); }
+    .stage-footer { position: absolute; z-index: 3; bottom: 12px; left: 14px; right: 14px; display: flex; align-items: end; justify-content: space-between; color: #c2d0d4; font-size: .72rem; text-shadow: 0 1px 8px #000; pointer-events: none; }
+    .stage-footer .mono { color: #9bb0b8; font-variant-numeric: tabular-nums; }
+    .drop-zone {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      margin-bottom: 13px;
+      padding: 13px 15px;
+      border: 1px dashed #365366;
+      border-radius: 11px;
+      background: rgba(10, 27, 39, .62);
+    }
+    .drop-zone.dragover { border-color: var(--lime); background: rgba(199, 243, 107, .07); }
+    .drop-copy { display: flex; align-items: center; gap: 12px; min-width: 0; }
+    .drop-copy svg { width: 21px; height: 21px; flex: none; color: var(--cyan); }
+    .drop-copy strong { display: block; color: #e4eceb; font-size: .83rem; font-weight: 620; }
+    .drop-copy span { display: block; color: #839aa6; font-size: .74rem; }
+    .file-name { max-width: 220px; overflow: hidden; color: #9db3bc; font-size: .76rem; text-overflow: ellipsis; white-space: nowrap; }
+    .visually-hidden { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; clip-path: inset(50%); }
+    .device-row { display: flex; flex-wrap: wrap; align-items: center; gap: 9px; }
+    .device-row input[type="password"], .device-row input[type="text"] { min-width: min(330px, 100%); min-height: 39px; padding: 8px 11px; border: 1px solid #294353; border-radius: 9px; outline: none; color: #dce6e8; background: #0a1a26; }
+    .toolbar-note { color: #8299a5; font-size: .75rem; }
+    .result-pair { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 15px; }
+    .result-pair figure { min-width: 0; margin: 0; overflow: hidden; border: 1px solid var(--line); border-radius: 11px; background: #07121b; }
+    .result-pair img { display: block; width: 100%; max-height: 310px; object-fit: contain; }
+    .review-tools[hidden], .result-pair[hidden], .result-pair img[hidden], .result-pair canvas[hidden] { display: none !important; }
+    .result-pair figcaption { display: flex; justify-content: space-between; padding: 8px 11px; border-top: 1px solid var(--line); color: #92a8b3; font-size: .73rem; }
+    .result-pair figcaption span:last-child { color: var(--cyan); }
+    .annotation-editor { margin-top: 16px; padding: 15px; border: 1px solid #294353; border-radius: 12px; background: rgba(7, 20, 30, .72); }
+    .annotation-head, .annotation-actions, .annotation-footer { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; }
+    .annotation-title strong { display: block; color: #e4eceb; font-size: .9rem; }
+    .annotation-title span, .annotation-help, .annotation-count { color: #8ea4ae; font-size: .75rem; }
+    .sequence-field { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+    .sequence-field input { width: min(240px, 60vw); min-height: 37px; padding: 7px 10px; border: 1px solid #294353; border-radius: 8px; outline: none; color: var(--text); background: #0a1a26; }
+    .annotation-actions { justify-content: start; margin-top: 12px; }
+    .annotation-actions .button[aria-pressed="true"] { border-color: var(--lime); color: var(--lime); background: rgba(199, 243, 107, .09); }
+    .annotation-canvas-wrap { display: grid; place-items: center; min-height: 180px; margin-top: 10px; overflow: hidden; border: 1px solid #1a3547; border-radius: 9px; background: #050d14; }
+    #annotationCanvas { display: block; max-width: 100%; max-height: 540px; width: auto; height: auto; touch-action: none; cursor: pointer; }
+    #annotationCanvas.drawing { cursor: crosshair; }
+    .annotation-footer { justify-content: start; margin-top: 12px; }
+    .annotation-footer .annotation-count { margin-left: auto; }
+    .helmet-review { margin-top: 16px; padding: 15px; border: 1px solid #294353; border-radius: 12px; background: rgba(7, 20, 30, .72); }
+    .helmet-review-head, .helmet-review-footer { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; }
+    .helmet-review-title strong { display: block; color: #e4eceb; font-size: .9rem; }
+    .helmet-review-title span, .helmet-review-help, .helmet-review-count { color: #8ea4ae; font-size: .75rem; }
+    .helmet-review-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 8px; max-height: 500px; margin-top: 12px; overflow: auto; }
+    .helmet-review-canvas-wrap { display: grid; place-items: center; min-height: 130px; max-height: 520px; margin-top: 10px; overflow: auto; border: 1px solid #1a3547; border-radius: 9px; background: #050d14; }
+    #helmetReviewCanvas { display: block; max-width: 100%; max-height: 500px; width: auto; height: auto; touch-action: none; cursor: pointer; }
+    #helmetReviewCanvas.drawing { cursor: crosshair; }
+    .helmet-review-card { min-width: 0; padding: 9px; border: 1px solid #203a4b; border-radius: 10px; background: #0a1a26; }
+    .helmet-review-card-head { display: flex; align-items: start; justify-content: space-between; gap: 8px; color: #cbd9dc; font-size: .73rem; }
+    .helmet-review-card img { display: block; width: 100%; height: 94px; margin: 7px auto; object-fit: contain; image-rendering: auto; background: #050d14; border-radius: 6px; }
+    .helmet-review-card .model-prediction { min-height: 32px; color: #8199a5; font-size: .67rem; }
+    .helmet-review-card .tiny-crop { color: var(--amber); }
+    .helmet-review-labels { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 4px; margin-top: 7px; }
+    .helmet-review-labels .button { min-height: 31px; padding: 5px 4px; font-size: .65rem; }
+    .helmet-review-labels .button[aria-pressed="true"] { border-color: var(--lime); color: var(--lime); background: rgba(199, 243, 107, .09); }
+    .helmet-review-actions { display: grid; grid-template-columns: minmax(0, 1fr); gap: 5px; margin-top: 7px; }
+    .helmet-review-actions > * { min-width: 0; width: 100%; box-sizing: border-box; }
+    .helmet-review-actions .button { min-height: 31px; padding: 5px 4px; font-size: .65rem; white-space: normal; }
+    .helmet-review-actions input, .helmet-review-actions select { font-size: .7rem; padding: 7px 5px; }
+    .helmet-review-footer { justify-content: start; margin-top: 12px; }
+    .helmet-review-footer .helmet-review-count { margin-left: auto; }
+    .message { min-height: 22px; margin: 12px 2px 0; color: #9db1bb; font-size: .8rem; }
+    .message.error { color: #ff9a9a; }
+    .summary { overflow: hidden; }
+    .summary-head { padding: 18px 18px 14px; border-bottom: 1px solid var(--line); }
+    .summary-title { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+    .summary-title h2 { margin: 0; font-size: .93rem; font-weight: 650; letter-spacing: -.01em; }
+    .summary-title span { color: #78909e; font-size: .67rem; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; }
+    .summary-caption { margin-top: 4px; color: #8097a3; font-size: .77rem; }
+    .stats { display: grid; grid-template-columns: 1fr 1fr; gap: 9px; padding: 15px; }
+    .stat { min-height: 83px; padding: 12px; border: 1px solid #1d384a; border-radius: 11px; background: linear-gradient(145deg, #102534, #0c1d29); }
+    .stat-label { display: flex; align-items: center; gap: 7px; color: #8ea4ae; font-size: .72rem; }
+    .stat-label i { width: 6px; height: 6px; border-radius: 50%; background: #7194a0; }
+    .stat strong { display: block; margin-top: 6px; color: #eff5ef; font-size: 1.55rem; line-height: 1; font-weight: 620; font-variant-numeric: tabular-nums; }
+    .stat.good .stat-label i { background: var(--lime); }
+    .stat.alert .stat-label i { background: var(--amber); }
+    .stat.neutral .stat-label i { background: var(--cyan); }
+    .readiness { margin: 0 15px 15px; padding: 12px; border: 1px solid #294353; border-radius: 11px; background: rgba(7, 20, 30, .65); }
+    .readiness-top { display: flex; align-items: center; gap: 8px; color: #d6e0df; font-size: .78rem; font-weight: 620; }
+    .readiness-top svg { width: 16px; height: 16px; color: var(--amber); }
+    .readiness p { margin: 5px 0 0; color: #899faa; font-size: .73rem; }
+    details { border-top: 1px solid var(--line); }
+    summary { padding: 13px 16px; color: #a5b7bf; cursor: pointer; font-size: .78rem; font-weight: 600; }
+    pre { max-height: 260px; overflow: auto; margin: 0; padding: 0 16px 16px; color: #94a9b3; font: 11px/1.55 ui-monospace, SFMono-Regular, Menlo, monospace; white-space: pre-wrap; overflow-wrap: anywhere; }
+    .privacy-note { display: flex; align-items: center; gap: 8px; margin: 15px 3px 0; color: #718994; font-size: .73rem; }
+    .privacy-note svg { width: 14px; height: 14px; flex: none; color: var(--cyan); }
+    .page-footer { display: flex; justify-content: space-between; gap: 16px; margin-top: 25px; padding: 14px 3px 0; border-top: 1px solid rgba(140, 172, 186, .12); color: #607986; font-size: .71rem; }
+    /* Visual refresh: a quieter, more deliberate operations desk. */
+    :root {
+      --page: #07121b;
+      --surface: #0c1b27;
+      --surface-raised: #122534;
+      --surface-soft: #0e202c;
+      --line: rgba(133, 173, 190, .17);
+      --muted: #8fa4af;
+      --text: #eef4f1;
+      --lime: #c9f477;
+      --lime-ink: #14200b;
+      --cyan: #76d8d2;
+      --amber: #f3bd6b;
+      --red: #ff8888;
+    }
+    body {
+      background:
+        radial-gradient(ellipse at 81% -24%, rgba(68, 126, 132, .18), transparent 40rem),
+        radial-gradient(ellipse at 0% 48%, rgba(137, 171, 88, .055), transparent 36rem),
+        var(--page);
+    }
+    .topbar {
+      position: sticky;
+      z-index: 10;
+      top: 0;
+      height: 68px;
+      border-bottom-color: rgba(140, 172, 186, .12);
+      background: rgba(7, 18, 27, .86);
+      backdrop-filter: blur(16px);
+    }
+    .brand-mark { border-radius: 13px; box-shadow: inset 0 0 18px rgba(199, 243, 107, .04); }
+    .brand-name { letter-spacing: -.015em; }
+    .status-pill, .model-pill { border-color: rgba(133, 173, 190, .18); background: rgba(14, 31, 43, .82); }
+    .shell { width: min(1460px, 100%); padding-top: 36px; }
+    .intro { margin-bottom: 24px; }
+    .eyebrow { font-size: .68rem; letter-spacing: .16em; }
+    h1 { max-width: 760px; margin-top: 9px; font-size: clamp(2.2rem, 4.25vw, 3.55rem); letter-spacing: -.065em; }
+    .intro p { max-width: 700px; line-height: 1.65; }
+    .intro-note { padding: 9px 12px; border: 1px solid rgba(133, 173, 190, .15); border-radius: 999px; background: rgba(13, 29, 42, .58); }
+    .layout { grid-template-columns: minmax(0, 1fr) 344px; gap: 20px; }
+    .card { border-color: rgba(133, 173, 190, .17); border-radius: 20px; background: linear-gradient(150deg, rgba(15, 33, 47, .97), rgba(9, 22, 33, .985)); box-shadow: 0 22px 64px rgba(0, 0, 0, .2), inset 0 1px rgba(255, 255, 255, .018); }
+    .studio-head { min-height: 68px; padding: 13px 17px; border-bottom-color: rgba(133, 173, 190, .12); }
+    .mode-tabs { gap: 3px; padding: 4px; border-color: rgba(133, 173, 190, .15); border-radius: 12px; background: rgba(5, 17, 26, .68); }
+    .mode-tab { padding: 9px 12px; border-radius: 9px; transition: color .16s ease, background .16s ease, box-shadow .16s ease; }
+    .mode-tab[aria-selected="true"] { color: #f1f7f3; background: #1b3544; box-shadow: inset 0 0 0 1px rgba(146, 192, 204, .12); }
+    .studio-caption { color: #90a5af; }
+    .workspace { padding: 17px; }
+    .drop-zone { min-height: 76px; padding: 13px 15px; border-color: rgba(117, 160, 179, .34); border-radius: 13px; background: rgba(8, 22, 32, .78); transition: background .16s ease, border-color .16s ease; }
+    .drop-copy strong { font-size: .86rem; }
+    .drop-copy span { margin-top: 2px; }
+    .button { min-height: 40px; border-color: rgba(117, 160, 179, .24); border-radius: 10px; background: #132938; }
+    .button:hover:not(:disabled) { border-color: rgba(118, 216, 210, .48); background: #193544; }
+    .button.primary { border-color: var(--lime); background: var(--lime); box-shadow: 0 5px 18px rgba(201, 244, 119, .11); }
+    .button.primary:hover:not(:disabled) { border-color: #ddffa0; background: #ddffa0; }
+    .button.danger { border-color: rgba(224, 106, 116, .3); background: rgba(91, 35, 45, .24); }
+    .stage { min-height: 390px; border-color: rgba(117, 160, 179, .17); border-radius: 15px; background-size: 32px 32px, 32px 32px, auto; }
+    #imageStage { min-height: 340px; }
+    .stage-icon { border-radius: 16px; background: rgba(118, 216, 210, .055); }
+    .stage-empty { max-width: 380px; }
+    .stage-empty strong { letter-spacing: -.015em; }
+    .result-pair { gap: 14px; margin-top: 17px; }
+    .result-heading { grid-column: 1 / -1; display: flex; align-items: end; justify-content: space-between; gap: 12px; padding: 0 1px 1px; }
+    .result-heading strong { display: block; color: #e7efec; font-size: .92rem; font-weight: 640; letter-spacing: -.015em; }
+    .result-heading span { color: #8198a4; font-size: .73rem; }
+    .result-pair figure { border-color: rgba(133, 173, 190, .18); border-radius: 13px; box-shadow: 0 8px 24px rgba(0, 0, 0, .12); }
+    .result-pair img { max-height: 440px; }
+    .result-pair figcaption { min-height: 38px; padding: 9px 12px; border-top-color: rgba(133, 173, 190, .13); }
+    .review-tools { display: grid; grid-template-columns: minmax(180px, .7fr) minmax(0, 2fr); gap: 12px 18px; align-items: center; margin-top: 16px; padding: 12px 14px; border: 1px solid rgba(133, 173, 190, .15); border-radius: 13px; background: rgba(7, 20, 30, .66); }
+    .review-tools-copy strong { display: block; color: #e4eceb; font-size: .78rem; }
+    .review-tools-copy span { display: block; margin-top: 2px; color: #849ba6; font-size: .68rem; line-height: 1.4; }
+    .review-tools-controls { display: flex; flex-wrap: wrap; align-items: center; gap: 7px; }
+    .review-toggle { display: inline-flex; align-items: center; gap: 6px; min-height: 31px; padding: 5px 8px; border: 1px solid rgba(133, 173, 190, .14); border-radius: 8px; color: #b6c6cb; background: rgba(16, 37, 51, .65); font-size: .68rem; cursor: pointer; }
+    .review-toggle input { width: 13px; height: 13px; margin: 0; accent-color: var(--lime); }
+    .confidence-filter { display: flex; flex: 1 1 180px; align-items: center; gap: 8px; min-width: 175px; margin-left: auto; color: #99adb6; font-size: .68rem; }
+    .confidence-filter input { width: 100%; min-width: 60px; accent-color: var(--lime); }
+    .confidence-filter output { min-width: 34px; color: #e0e9e5; font-variant-numeric: tabular-nums; text-align: right; }
+    .filter-reset { min-height: 31px; padding: 5px 9px; border: 1px solid rgba(157, 240, 112, .28); border-radius: 8px; color: #c4eea2; background: rgba(157, 240, 112, .07); font: inherit; font-size: .68rem; cursor: pointer; }
+    .filter-reset:hover { background: rgba(157, 240, 112, .14); }
+    .review-legend { grid-column: 2; margin-top: -6px; color: #758c97; font-size: .64rem; }
+    .result-pair canvas { display: block; width: 100%; max-height: 440px; height: auto; object-fit: contain; background: #07121b; }
+    .resolution-note { display: flex; gap: 8px; margin: 9px 0 0 !important; padding: 9px 10px; border: 1px solid rgba(243, 189, 107, .2); border-radius: 9px; color: #e2c48f !important; background: rgba(88, 62, 28, .16); font-size: .68rem !important; line-height: 1.45; }
+    .summary { position: sticky; top: 84px; }
+    .summary-head { padding: 18px 18px 15px; border-bottom-color: rgba(133, 173, 190, .12); }
+    .summary-title h2 { font-size: .98rem; letter-spacing: -.02em; }
+    .summary-title span { padding: 5px 7px; border: 1px solid rgba(133, 173, 190, .15); border-radius: 6px; color: #8ea5af; font-size: .59rem; letter-spacing: .1em; }
+    .summary-caption { margin-top: 6px; }
+    .stats { gap: 8px; padding: 13px; }
+    .stat { min-height: 79px; padding: 11px; border-color: rgba(133, 173, 190, .14); border-radius: 12px; background: linear-gradient(145deg, rgba(17, 39, 54, .9), rgba(11, 27, 39, .96)); }
+    .stat-label { font-size: .7rem; }
+    .stat strong { margin-top: 7px; font-size: 1.62rem; letter-spacing: -.045em; }
+    .stat.good { border-color: rgba(201, 244, 119, .2); background: linear-gradient(145deg, rgba(33, 53, 39, .54), rgba(14, 30, 37, .92)); }
+    .stat.alert { border-color: rgba(243, 189, 107, .17); background: linear-gradient(145deg, rgba(57, 43, 30, .42), rgba(14, 28, 38, .92)); }
+    .readiness { margin: 0 13px 13px; padding: 13px; border-color: rgba(133, 173, 190, .16); border-radius: 12px; }
+    .readiness p { line-height: 1.55; }
+    details { border-top-color: rgba(133, 173, 190, .12); }
+    summary { padding: 14px 16px; }
+    .privacy-note { margin-top: 14px; color: #81949d; }
+    .page-footer { margin-top: 22px; border-top-color: rgba(140, 172, 186, .1); }
+    @media (max-width: 1080px) {
+      .layout { grid-template-columns: minmax(0, 1fr); }
+      .summary { position: static; }
+      .summary .stats { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+    }
+    @media (max-width: 760px) {
+      .topbar { height: 62px; }
+      .shell { padding-top: 26px; }
+      .intro { gap: 12px; }
+      .layout { gap: 14px; }
+      .studio-head { gap: 11px; }
+      .studio-caption { padding-left: 2px; }
+      .workspace { padding: 12px; }
+      #imageStage { min-height: clamp(260px, 68vw, 370px); }
+      .result-pair { grid-template-columns: 1fr; gap: 10px; }
+      .result-heading { align-items: start; flex-direction: column; gap: 2px; }
+      .result-pair img { max-height: 330px; }
+      .result-pair canvas { max-height: 330px; }
+      .review-tools { grid-template-columns: 1fr; gap: 9px; }
+      .review-legend { grid-column: 1; margin-top: -5px; }
+      .summary .stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    }
+    @media (max-width: 1000px) { .stage { min-height: 370px; } }
+    @media (max-width: 760px) {
+      .topbar { height: 64px; padding: 0 16px; }
+      .brand-caption, .topbar-right .model-pill { display: none; }
+      .shell { padding: 30px 14px 22px; }
+      .intro { align-items: start; flex-direction: column; gap: 15px; margin-bottom: 20px; }
+      .intro-note { white-space: normal; }
+      .layout { grid-template-columns: 1fr; }
+      .studio-head { align-items: start; flex-direction: column; }
+      .workspace { padding: 13px; }
+      .toolbar { align-items: stretch; flex-direction: column; }
+      .toolbar-group { width: 100%; }
+      .device-row select { flex: 1; }
+      .stage { min-height: clamp(250px, 68vw, 430px); }
+      .drop-zone { align-items: start; flex-direction: column; }
+      .result-pair { grid-template-columns: 1fr; }
+      .result-pair img { max-height: 260px; }
+      #annotationCanvas { max-height: 420px; }
+      .page-footer { flex-direction: column; gap: 4px; }
+    }
+    @media (prefers-reduced-motion: reduce) { *, *::before, *::after { scroll-behavior: auto !important; transition-duration: .01ms !important; } }
+  </style>
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <div class="brand-mark" aria-hidden="true">
+        <svg viewBox="0 0 24 24" width="23" height="23" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3 20 6v5c0 5-3.4 8.2-8 10-4.6-1.8-8-5-8-10V6l8-3Z"/><path d="M7.4 12.4c.8-2 2.3-3.2 4.6-3.2 2.1 0 3.5 1.2 4.3 3.2M9 15h6"/></svg>
+      </div>
+      <div><div class="brand-name">Rider Safety</div><div class="brand-caption">Helmet detection console</div></div>
+    </div>
+    <div class="topbar-right">
+      <span id="apiStatus" class="status-pill"><i class="status-dot"></i><span>Checking local API</span></span>
+      <span id="modelStatus" class="model-pill"><i class="status-dot"></i><span>Model status</span></span>
+    </div>
+  </header>
+
+  <main class="shell">
+    <section class="intro">
+      <div>
+        <div class="eyebrow"><i class="eyebrow-mark"></i> Computer vision · Local processing</div>
+        <h1>Make every ride <em>visible.</em></h1>
+        <p>Analyze a traffic image, recorded CCTV clip, or live camera stream. Helmet checks run for people associated with a motorcycle or bicycle.</p>
+      </div>
+      <div class="intro-note">
+        <svg viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="6" width="16" height="13" rx="2"/><path d="m9 6 1.2-2h3.6L15 6M12 10v5m-2.5-2.5h5"/></svg>
+        Camera preview stays on this device
+      </div>
+    </section>
+
+    <div class="layout">
+      <section class="card studio" aria-label="Detection workspace">
+        <div class="studio-head">
+          <div class="mode-tabs" role="tablist" aria-label="Input mode">
+            <button id="imageTab" class="mode-tab" role="tab" aria-selected="true" aria-controls="imagePanel">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="4" width="17" height="16" rx="2"/><circle cx="9" cy="10" r="1.5"/><path d="m4 17 5-5 3.5 3 2.8-2.5 4.7 4"/></svg>Image review
+            </button>
+            <button id="cameraTab" class="mode-tab" role="tab" aria-selected="false" aria-controls="cameraPanel">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="6" width="13" height="12" rx="2"/><path d="m16 10 5-3v10l-5-3z"/></svg>Live camera
+            </button>
+            <button id="videoTab" class="mode-tab" role="tab" aria-selected="false" aria-controls="videoPanel">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m10 9 5 3-5 3z"/></svg>Video file
+            </button>
+          </div>
+          <div class="studio-caption"><i class="status-dot"></i> Analysis runs on your local server</div>
+        </div>
+
+        <div class="workspace">
+          <section id="imagePanel" role="tabpanel" aria-labelledby="imageTab">
+            <div id="dropZone" class="drop-zone">
+              <div class="drop-copy">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 16V4m-4 4 4-4 4 4"/><path d="M5 14v5a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-5"/></svg>
+                <div><strong>Drop a traffic image to inspect</strong><span>JPG, PNG or WebP · up to 20 MB</span></div>
+              </div>
+              <div class="toolbar-group">
+                <span id="fileName" class="file-name">No image selected</span>
+                <button id="chooseImage" class="button" type="button">Choose image</button>
+                <input id="imageFile" class="visually-hidden" type="file" accept="image/*">
+                <button id="runImage" class="button primary" disabled>
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14m-6-6 6 6-6 6"/></svg>Analyze image
+                </button>
+              </div>
+            </div>
+            <div class="toolbar" style="margin-top: 12px">
+              <label class="field-label" for="reviewQueue">Local footage review queue</label>
+              <select id="reviewQueue"><option value="">Loading frames…</option></select>
+              <button id="loadReviewFrame" type="button" class="button">Open frame for review</button>
+            </div>
+            <div id="imageStage" class="stage">
+              <div class="stage-empty">
+                <div class="stage-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="4" width="17" height="16" rx="2"/><circle cx="9" cy="10" r="1.5"/><path d="m4 17 5-5 3.5 3 2.8-2.5 4.7 4"/></svg></div>
+                <strong>Your review canvas</strong><span>Choose an image above to see the original and annotated result side by side.</span>
+              </div>
+            </div>
+          </section>
+
+          <div class="toolbar" style="margin-bottom: 12px">
+            <label class="field-label" for="captureQuality">Video and camera detail</label>
+            <select id="captureQuality">
+              <option value="original" selected>Original resolution · best detail</option>
+              <option value="1280">1280 px · balanced</option>
+              <option value="640">640 px · faster transfer</option>
+            </select>
+            <span class="toolbar-note">Small heads need source detail. Higher resolution may take longer.</span>
+          </div>
+          <section id="cameraPanel" role="tabpanel" aria-labelledby="cameraTab" hidden>
+            <div class="toolbar">
+              <div class="toolbar-group">
+                <label class="field-label" for="cameraSource">Camera source</label>
+                <select id="cameraSource" aria-label="Camera source">
+                  <option value="browser">This computer · browser camera</option>
+                  <option value="webcam">App host · USB webcam</option>
+                  <option value="picamera">App host · Raspberry Pi Camera</option>
+                  <option value="rtsp">Network CCTV · RTSP</option>
+                </select>
+              </div>
+              <div class="toolbar-group">
+                <button id="connectCamera" class="button primary">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="6" width="13" height="12" rx="2"/><path d="m16 10 5-3v10l-5-3z"/></svg>Connect &amp; detect live
+                </button>
+                <button id="toggleLiveAnalysis" class="button" type="button" disabled>
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="4" width="5" height="16" rx="1"/><rect x="14" y="4" width="5" height="16" rx="1"/></svg>Start live detection
+                </button>
+                <button id="stopCamera" class="button danger" disabled>Stop</button>
+              </div>
+            </div>
+            <div id="deviceRow" class="device-row" hidden>
+              <label class="field-label" for="cameraDevice">Device</label>
+              <select id="cameraDevice"><option value="">Default camera</option></select>
+              <button id="refreshDevices" class="button quiet" type="button">Refresh devices</button>
+              <span class="toolbar-note">Grant camera access when your browser asks.</span>
+            </div>
+            <div id="rtspRow" class="device-row" hidden>
+              <label class="field-label" for="rtspUrl">CCTV RTSP URL</label>
+              <input id="rtspUrl" type="password" autocomplete="off" spellcheck="false" placeholder="rtsp://camera-address:554/stream">
+              <button id="showRtspUrl" class="button quiet" type="button" aria-pressed="false">Show</button>
+              <span class="toolbar-note">The URL is sent only to this local app and is not added to the stream URL.</span>
+            </div>
+            <div id="cameraStage" class="stage" style="margin-top: 13px">
+              <video id="cameraVideo" autoplay playsinline muted hidden></video>
+              <img id="serverFeed" class="feed" alt="Server camera stream" hidden>
+              <canvas id="liveOverlay" class="live-overlay" aria-hidden="true" hidden></canvas>
+              <div id="cameraEmpty" class="stage-empty">
+                <div class="stage-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="6" width="13" height="12" rx="2"/><path d="m16 10 5-3v10l-5-3z"/></svg></div>
+                <strong>Camera is off</strong><span>Connect a camera to start live detection. Computer camera preview stays in this browser tab.</span>
+              </div>
+              <div class="stage-hud"><span id="feedLabel" class="hud-chip">No input</span><span id="feedState" class="hud-chip">Standby</span></div>
+              <div class="stage-footer"><span id="feedHint">Awaiting camera connection</span><span id="frameSize" class="mono">— × —</span></div>
+            </div>
+          </section>
+
+          <section id="videoPanel" role="tabpanel" aria-labelledby="videoTab" hidden>
+            <div id="videoDropZone" class="drop-zone">
+              <div class="drop-copy">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m10 9 5 3-5 3z"/></svg>
+                <div><strong>Choose a recorded CCTV video</strong><span>MP4, WebM or QuickTime · frames are analyzed continuously</span></div>
+              </div>
+              <div class="toolbar-group">
+                <span id="videoFileName" class="file-name">No video selected</span>
+                <button id="chooseVideo" class="button" type="button">Choose video</button>
+                <input id="videoFile" class="visually-hidden" type="file" accept="video/mp4,video/webm,video/quicktime,.m4v,.mov">
+                <button id="analyzeVideo" class="button primary" type="button" disabled>Start video analysis</button>
+              </div>
+            </div>
+            <div id="videoStage" class="stage" style="margin-top: 13px">
+              <video id="reviewVideo" controls playsinline hidden></video>
+              <div id="videoEmpty" class="stage-empty">
+                <div class="stage-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m10 9 5 3-5 3z"/></svg></div>
+                <strong>No video selected</strong><span>Choose a traffic recording, then start analysis to see detections update as it plays.</span>
+              </div>
+              <div class="stage-hud"><span class="hud-chip">Recorded video</span><span id="videoState" class="hud-chip">Standby</span></div>
+              <div class="stage-footer"><span id="videoHint">The video stays in this browser</span><span id="videoSize" class="mono">— × —</span></div>
+            </div>
+            <p class="toolbar-note" style="margin: 10px 2px 0">Only sampled JPEG frames are sent to the local detector while analysis runs. Inference speed depends on your model and hardware.</p>
+          </section>
+
+          <div id="message" class="message" role="status" aria-live="polite"></div>
+          <section id="reviewTools" class="review-tools" aria-label="Detection display filters" hidden>
+            <div class="review-tools-copy">
+              <strong>Overlay filters</strong>
+              <span>Adjust what is drawn; the summary keeps the complete model counts.</span>
+            </div>
+            <div class="review-tools-controls">
+              <label class="review-toggle"><input id="showMotorcycles" type="checkbox" checked>Motorcycles</label>
+              <label class="review-toggle"><input id="showBicycles" type="checkbox" checked>Bicycles</label>
+              <label class="review-toggle"><input id="showHelmet" type="checkbox" checked>Helmet</label>
+              <label class="review-toggle"><input id="showNoHelmet" type="checkbox" checked>No helmet</label>
+              <label class="review-toggle"><input id="showUnknown" type="checkbox" checked>Uncertain</label>
+              <label class="review-toggle"><input id="showNoMoto" type="checkbox" checked>No moto match</label>
+              <label class="confidence-filter" for="displayConfidence">Display confidence
+                <input id="displayConfidence" type="range" min="0" max="90" step="5" value="0">
+                <output id="displayConfidenceValue" for="displayConfidence">0%</output>
+              </label>
+              <button id="showAllOverlays" class="filter-reset" type="button">Show all detections</button>
+            </div>
+            <div id="reviewLegend" class="review-legend" aria-live="polite">Display filters affect the overlay only; the summary always keeps the complete model counts.</div>
+          </section>
+          <section id="results" class="result-pair" aria-label="Detection result" hidden>
+            <div class="result-heading"><strong>Frame review</strong><span>Compare the source frame with the detector overlay</span></div>
+            <figure><img id="originalResult" alt="Original image or captured camera frame"><figcaption><span>Input frame</span><span>Source</span></figcaption></figure>
+            <figure><canvas id="annotatedCanvas" role="img" aria-label="Detection output with adjustable overlays"></canvas><img id="annotatedResult" alt="Annotated detection result" hidden><figcaption><span>Detection output</span><span>Local inference</span></figcaption></figure>
+          </section>
+          <div class="annotation-footer"><button id="reviewCurrentFrame" class="button" type="button" hidden>Review this frame for training</button></div>
+          <section id="annotationEditor" class="annotation-editor" aria-label="Correct motorcycle detections" hidden>
+            <div class="annotation-head">
+              <div class="annotation-title">
+                <strong>Correct motorcycle boxes</strong>
+                <span>Remove false detections and draw a box around each missed motorcycle.</span>
+              </div>
+              <label class="sequence-field field-label" for="annotationSequence">
+                Capture group
+                <input id="annotationSequence" type="text" maxlength="120" value="camera-session-1" autocomplete="off">
+              </label>
+            </div>
+            <div class="annotation-actions">
+              <button id="drawMotorcycle" class="button" type="button" aria-pressed="false">Draw missed motorcycle</button>
+              <button id="removeMotorcycle" class="button danger" type="button" disabled>Remove selected box</button>
+              <button id="undoAnnotation" class="button quiet" type="button" disabled>Undo</button>
+              <span class="annotation-help">Click a box to select it. Use the draw tool, then drag around one motorcycle. Keep one group name for frames from the same video; use another for a different scene.</span>
+            </div>
+            <div class="annotation-canvas-wrap">
+              <canvas id="annotationCanvas" aria-label="Motorcycle annotation canvas"></canvas>
+            </div>
+            <div class="annotation-footer">
+              <button id="saveAnnotation" class="button primary" type="button">Save reviewed frame</button>
+              <button id="exportAnnotations" class="button" type="button" disabled>Download YOLO dataset</button>
+              <span id="annotationCollection" class="annotation-count" aria-live="polite">No reviewed frames saved yet</span>
+            </div>
+            <div class="annotation-help">Saving stores a local image and label copy. Dataset export unlocks after you review frames from two independent capture groups.</div>
+            <div id="annotationStatus" class="annotation-help" role="status" aria-live="polite"></div>
+          </section>
+          <section id="helmetReview" class="helmet-review" aria-label="Correct rider helmet statuses" hidden>
+            <div class="helmet-review-head">
+              <div class="helmet-review-title">
+                <strong>Review rider helmet status</strong>
+                <span>Confirm each rider from the source frame. Model guesses are only hints and are never saved as labels automatically.</span>
+              </div>
+              <label class="toolbar-note"><input id="fullyReviewed" type="checkbox"> Every visible rider head is included (including missed riders)</label>
+                <span id="helmetReviewGroup" class="helmet-review-help"></span>
+            </div>
+            <div class="annotation-actions">
+              <button id="drawMissedHead" class="button" type="button" aria-pressed="false">Add missed rider head</button>
+              <span class="helmet-review-help">Drag tightly around a missed rider's head. Then label that crop below.</span>
+            </div>
+            <div class="helmet-review-canvas-wrap">
+              <canvas id="helmetReviewCanvas" aria-label="Review and add missed rider head crops"></canvas>
+            </div>
+            <div id="helmetReviewGrid" class="helmet-review-grid"></div>
+            <div class="helmet-review-footer">
+              <button id="saveHelmetReview" class="button primary" type="button" disabled>Save helmet review</button>
+              <button id="exportHelmetReview" class="button" type="button" disabled>Download helmet training data</button>
+              <span id="helmetReviewCollection" class="helmet-review-count" aria-live="polite">No rider reviews saved yet</span>
+            </div>
+            <div class="helmet-review-help">Use Unsure when the head is covered, occluded, or too small to judge. Unsure examples stay out of training. Review frames from at least three independent capture groups before export; keep frames from one clip in the same group.</div>
+            <div id="helmetReviewStatus" class="helmet-review-help" role="status" aria-live="polite"></div>
+          </section>
+        </div>
+      </section>
+
+      <aside class="card summary" aria-label="Detection summary">
+        <div class="summary-head">
+          <div class="summary-title"><h2>Frame summary</h2><span>Latest result</span></div>
+          <div id="summaryCaption" class="summary-caption">Waiting for an image or camera frame</div>
+        </div>
+        <div class="stats" aria-live="polite">
+          <div class="stat"><div class="stat-label"><i></i>Motorcycles</div><strong id="countMotorcycles">—</strong></div>
+          <div class="stat"><div class="stat-label"><i></i>Bicycles</div><strong id="countBicycles">—</strong></div>
+          <div class="stat neutral"><div class="stat-label"><i></i>Associated riders</div><strong id="countRiders">—</strong></div>
+          <div class="stat neutral"><div class="stat-label"><i></i>Moto riders</div><strong id="countMotoRiders">—</strong></div>
+          <div class="stat neutral"><div class="stat-label"><i></i>No moto match</div><strong id="countNoMoto">—</strong></div>
+          <div class="stat neutral"><div class="stat-label"><i></i>Moto uncertain</div><strong id="countMotoUncertain">—</strong></div>
+          <div class="stat good"><div class="stat-label"><i></i>Helmet</div><strong id="countHelmet">—</strong></div>
+          <div class="stat alert"><div class="stat-label"><i></i>No helmet</div><strong id="countNoHelmet">—</strong></div>
+          <div class="stat"><div class="stat-label"><i></i>Uncertain</div><strong id="countUnknown">—</strong></div>
+        </div>
+        <div class="readiness">
+          <div class="readiness-top">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3 21 19H3L12 3Z"/><path d="M12 9v4m0 3h.01"/></svg>
+            <span id="readinessTitle">Checking detector</span>
+          </div>
+          <p id="readinessText">Local model availability will appear here.</p>
+          <p id="resolutionNote" class="resolution-note" hidden></p>
+        </div>
+        <details>
+          <summary>Structured result and timings</summary>
+          <pre id="details">No result yet.</pre>
+        </details>
+      </aside>
+    </div>
+
+    <p class="privacy-note">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="10" width="14" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3m-4 4v3"/></svg>
+      Browser camera previews and selected video clips stay on this device; only sampled frames go to this local app. RTSP CCTV streams are read on the app host.
+    </p>
+    <footer class="page-footer"><span>Helmet Rider Detection</span><span>People are classified only after rider-to-vehicle association.</span></footer>
+  </main>
+
+  <script>
+    const $ = (selector) => document.querySelector(selector);
+    const imageTab = $("#imageTab");
+    const cameraTab = $("#cameraTab");
+    const videoTab = $("#videoTab");
+    const imagePanel = $("#imagePanel");
+    const cameraPanel = $("#cameraPanel");
+    const videoPanel = $("#videoPanel");
+    const sourceSelect = $("#cameraSource");
+    const deviceSelect = $("#cameraDevice");
+    const video = $("#cameraVideo");
+    const reviewVideo = $("#reviewVideo");
+    const serverFeed = $("#serverFeed");
+    const liveOverlay = $("#liveOverlay");
+    const liveOverlayContext = liveOverlay.getContext("2d");
+    const annotatedCanvas = $("#annotatedCanvas");
+    const annotatedContext = annotatedCanvas.getContext("2d");
+    const message = $("#message");
+    let browserStream = null;
+    let serverStatsTimer = null;
+    let serverCameraSessionId = null;
+    let browserAnalysisActive = false;
+    let browserAnalysisRunId = 0;
+    let browserAnalysisController = null;
+    let lastBrowserInferenceAt = 0;
+    let browserAnalysisFps = 0;
+    let browserAnalysisFrames = 0;
+    let continuousAnalysisKind = null;
+    let recordedVideoUrl = null;
+    const browserCaptureCanvas = document.createElement("canvas");
+    let originalResultUrl = null;
+    let latestResultData = null;
+    let reviewSourceImage = null;
+    let reviewRenderVersion = 0;
+    let currentMode = "image";
+    let detectorAvailable = false;
+    const annotationCanvas = $("#annotationCanvas");
+    const annotationContext = annotationCanvas.getContext("2d");
+    let annotationFile = null;
+    let annotationFileName = "review.jpg";
+    let annotationImage = null;
+    let annotationImageUrl = null;
+    let annotationBoxes = [];
+    let annotationUndo = [];
+    let selectedAnnotation = -1;
+    let drawAnnotationMode = false;
+    let annotationDragStart = null;
+    let annotationDraft = null;
+    let annotationDirty = false;
+    let annotationSaved = false;
+    let annotationSaving = false;
+    let latestReviewFrame = null;
+    let helmetReviewFile = null;
+    let helmetReviewFileName = "review.jpg";
+    let helmetReviewImage = null;
+    let helmetReviewImageUrl = null;
+    let helmetReviewSamples = [];
+    let helmetReviewSaving = false;
+    let reviewSourceTimestamp = null;
+    const helmetReviewCanvas = $("#helmetReviewCanvas");
+    const helmetReviewContext = helmetReviewCanvas.getContext("2d");
+    let drawMissedHeadMode = false;
+    let correctingHeadIndex = null;
+    let missedHeadDragStart = null;
+    let missedHeadDraft = null;
+
+    function setMessage(text, isError = false) {
+      message.textContent = text;
+      message.classList.toggle("error", isError);
+    }
+
+    function setMode(mode) {
+      currentMode = mode;
+      const isCamera = mode === "camera";
+      const isVideo = mode === "video";
+      imageTab.setAttribute("aria-selected", String(!isCamera && !isVideo));
+      cameraTab.setAttribute("aria-selected", String(isCamera));
+      videoTab.setAttribute("aria-selected", String(isVideo));
+      imagePanel.hidden = isCamera || isVideo;
+      cameraPanel.hidden = !isCamera;
+      videoPanel.hidden = !isVideo;
+      $("#results").hidden = true;
+      $("#reviewTools").hidden = true;
+      $("#resolutionNote").hidden = true;
+      $("#imageStage").hidden = false;
+      latestResultData = null;
+      reviewSourceImage = null;
+      reviewRenderVersion += 1;
+      if (!isCamera) stopCamera();
+      if (!isVideo) stopVideoAnalysis();
+      if (isCamera) updateSourceControls();
+    }
+
+    function updateSourceControls() {
+      const isBrowserCamera = sourceSelect.value === "browser";
+      const isRtspCamera = sourceSelect.value === "rtsp";
+      $("#deviceRow").hidden = !isBrowserCamera;
+      $("#rtspRow").hidden = !isRtspCamera;
+      $("#toggleLiveAnalysis").hidden = !isBrowserCamera;
+      $("#feedHint").textContent = isBrowserCamera
+        ? "Connect for continuous motorcycle and helmet detection on the live preview"
+        : (isRtspCamera
+          ? "Connect a local-network RTSP camera for continuous analysis"
+          : "Analysis runs continuously on the app host camera");
+    }
+
+    function setCameraButtons(connected, busy = false) {
+      $("#connectCamera").disabled = connected || busy;
+      $("#stopCamera").disabled = !connected && !busy;
+      $("#toggleLiveAnalysis").disabled = !browserStream || busy;
+      $("#cameraSource").disabled = connected || busy;
+      $("#rtspUrl").disabled = connected || busy;
+      $("#showRtspUrl").disabled = connected || busy;
+      deviceSelect.disabled = connected || busy;
+    }
+
+    function setSummary(summary) {
+      const values = {
+        countMotorcycles: summary.motorcycles,
+        countBicycles: summary.bicycles,
+        countRiders: summary.riders,
+        countHelmet: summary.helmet,
+        countNoHelmet: summary.no_helmet,
+        countUnknown: summary.unknown,
+        countMotoRiders: summary.motorcycle_riders,
+        countNoMoto: summary.no_motorcycle_match,
+        countMotoUncertain: summary.motorcycle_uncertain,
+      };
+      for (const [id, value] of Object.entries(values)) {
+        $("#" + id).textContent = value ?? 0;
+      }
+      $("#summaryCaption").textContent = summary.motorcycles > 0
+        ? "Motorcycle detected · No moto match = no supported riding association"
+        : (summary.detector_ran ? "No motorcycle detected in this frame"
+          : "Waiting for a fresh detection to check motorcycle presence");
+    }
+
+    function renderResults(originalUrl, annotatedUrl, resultData = null) {
+      if (originalResultUrl) URL.revokeObjectURL(originalResultUrl);
+      originalResultUrl = originalUrl.startsWith("blob:") ? originalUrl : null;
+      $("#originalResult").src = originalUrl;
+      latestResultData = resultData;
+      updateOverlayNotice();
+      $("#annotatedResult").src = annotatedUrl;
+      const canRenderOverlay = Boolean(
+        resultData && Number(resultData.width) > 0 && Number(resultData.height) > 0
+      );
+      $("#reviewTools").hidden = !canRenderOverlay;
+      $("#annotatedResult").hidden = canRenderOverlay;
+      annotatedCanvas.hidden = !canRenderOverlay;
+      if (canRenderOverlay) {
+        const version = ++reviewRenderVersion;
+        const source = new Image();
+        reviewSourceImage = source;
+        source.onload = () => {
+          if (version !== reviewRenderVersion) return;
+          annotatedCanvas.width = Number(resultData.width) || source.naturalWidth;
+          annotatedCanvas.height = Number(resultData.height) || source.naturalHeight;
+          drawReviewOverlay();
+        };
+        source.onerror = () => {
+          if (version !== reviewRenderVersion) return;
+          annotatedCanvas.hidden = true;
+          $("#annotatedResult").hidden = false;
+        };
+        source.src = originalUrl;
+        updateResolutionNote(resultData);
+      } else {
+        reviewSourceImage = null;
+        $("#resolutionNote").hidden = true;
+      }
+      $("#results").hidden = false;
+      $("#imageStage").hidden = currentMode === "image";
+    }
+
+    function overlayFilters() {
+      return {
+        motorcycles: $("#showMotorcycles").checked,
+        bicycles: $("#showBicycles").checked,
+        helmet: $("#showHelmet").checked,
+        noHelmet: $("#showNoHelmet").checked,
+        unknown: $("#showUnknown").checked,
+        noMoto: $("#showNoMoto").checked,
+        confidence: Number($("#displayConfidence").value || 0) / 100,
+      };
+    }
+
+    function resetOverlayFilters() {
+      for (const selector of ["#showMotorcycles", "#showBicycles", "#showHelmet", "#showNoHelmet", "#showUnknown", "#showNoMoto"]) {
+        $(selector).checked = true;
+      }
+      $("#displayConfidence").value = "0";
+      $("#displayConfidenceValue").textContent = "0%";
+      updateOverlayNotice();
+      drawReviewOverlay();
+      if (currentMode === "camera" && latestResultData) drawLiveOverlay(latestResultData);
+    }
+
+    function updateOverlayNotice() {
+      const data = latestResultData;
+      if (!data) return;
+      const filters = overlayFilters();
+      const riders = data.heads ?? data.riders ?? [];
+      const vehicles = data.vehicles || [];
+      const hidden = [];
+      const hiddenHelmets = riders.filter((rider) => (rider.helmet?.status || "unknown") === "helmet").length;
+      const hiddenNoHelmets = riders.filter((rider) => (rider.helmet?.status || "unknown") === "no_helmet").length;
+      const hiddenUnknown = riders.filter((rider) => !["helmet", "no_helmet"].includes(rider.helmet?.status || "unknown")).length;
+      const hiddenMotorcycles = vehicles.filter((vehicle) => vehicle.vehicle_type === "motorcycle").length;
+      const hiddenBicycles = vehicles.filter((vehicle) => vehicle.vehicle_type === "bicycle").length;
+      if (!filters.helmet && hiddenHelmets) hidden.push(`${hiddenHelmets} helmet detections hidden`);
+      if (!filters.noHelmet && hiddenNoHelmets) hidden.push(`${hiddenNoHelmets} no-helmet detections hidden`);
+      if (!filters.unknown && hiddenUnknown) hidden.push(`${hiddenUnknown} uncertain rider boxes hidden`);
+      if (!filters.motorcycles && hiddenMotorcycles) hidden.push(`${hiddenMotorcycles} motorcycle boxes hidden`);
+      if (!filters.bicycles && hiddenBicycles) hidden.push(`${hiddenBicycles} bicycle boxes hidden`);
+      const hiddenNoMoto = (data.persons || []).filter(person => person.motorcycle_status === "no_motorcycle_match").length;
+      if (!filters.noMoto && hiddenNoMoto) hidden.push(`${hiddenNoMoto} no-moto person boxes hidden`);
+      $("#reviewLegend").textContent = hidden.length
+        ? `${hidden.join(" · ")}. Frame summary counts still include them.`
+        : (filters.confidence > 0
+          ? "The confidence filter may hide lower-confidence boxes; frame summary counts remain complete."
+          : "All detection categories are visible. Display filters affect the overlay only; frame summary counts stay complete.");
+    }
+
+    function drawReviewOverlay() {
+      const data = latestResultData;
+      const image = reviewSourceImage;
+      if (!data || !image?.complete || !image.naturalWidth || !image.naturalHeight) return;
+      const width = Number(data.width) || image.naturalWidth;
+      const height = Number(data.height) || image.naturalHeight;
+      if (annotatedCanvas.width !== width || annotatedCanvas.height !== height) {
+        annotatedCanvas.width = width;
+        annotatedCanvas.height = height;
+      }
+      const context = annotatedContext;
+      context.clearRect(0, 0, width, height);
+      context.drawImage(image, 0, 0, width, height);
+      const filters = overlayFilters();
+      const lineWidth = Math.max(2, Math.min(5, width * .0025));
+      const fontSize = Math.max(13, Math.min(22, width * .017));
+      context.lineWidth = lineWidth;
+      context.font = `700 ${fontSize}px ui-sans-serif, system-ui, sans-serif`;
+      context.textBaseline = "middle";
+
+      for (const vehicle of data.vehicles || []) {
+        const type = vehicle.vehicle_type;
+        if ((type === "motorcycle" && !filters.motorcycles)
+          || (type === "bicycle" && !filters.bicycles)
+          || Number(vehicle.confidence || 0) < filters.confidence) continue;
+        const [x1, y1, x2, y2] = vehicle.bbox || [];
+        if (![x1, y1, x2, y2].every(Number.isFinite)) continue;
+        const color = type === "bicycle" ? "#c9f477" : "#53d7e7";
+        context.strokeStyle = color;
+        context.fillStyle = color;
+        context.strokeRect(x1, y1, x2 - x1, y2 - y1);
+        drawFrameLabel(context, type === "bicycle" ? "BIKE" : "MOTO", x1, y1, color, fontSize, width);
+      }
+
+      for (const rider of data.heads ?? data.riders ?? []) {
+        const status = rider.helmet?.status || "unknown";
+        const possibleHelmet = status === "unknown"
+          && Number(rider.helmet?.helmet_probability || 0) > 0.50;
+        const visible = status === "helmet" ? filters.helmet
+          : (status === "no_helmet" ? filters.noHelmet : filters.unknown);
+        if (!visible || Number(rider.helmet?.confidence || 0) < filters.confidence) continue;
+        const box = rider.helmet_bbox || rider.head_bbox;
+        if (!box || box.length !== 4 || !box.every(Number.isFinite)) continue;
+        const [x1, y1, x2, y2] = box;
+        const color = status === "helmet" ? "#9df070"
+          : (status === "no_helmet" ? "#ff6868" : "#f4bd5b");
+        context.strokeStyle = color;
+        context.fillStyle = color;
+        context.strokeRect(x1, y1, x2 - x1, y2 - y1);
+        const label = status === "helmet" ? "H"
+          : (status === "no_helmet" ? "NO" : (possibleHelmet ? "H?" : "?"));
+        drawFrameLabel(context, label, x1, y1, color, fontSize, width);
+      }
+      if (filters.noMoto) {
+        for (const person of data.persons || []) {
+          if (person.motorcycle_status !== "no_motorcycle_match"
+            || Number(person.confidence || 0) < filters.confidence) continue;
+          const [x1, y1, x2, y2] = person.bbox || [];
+          if (![x1, y1, x2, y2].every(Number.isFinite)) continue;
+          context.strokeStyle = "#a5b6bd";
+          context.strokeRect(x1, y1, x2 - x1, y2 - y1);
+          drawFrameLabel(context, "NO MOTO MATCH", x1, y1, "#a5b6bd", fontSize, width);
+        }
+      }
+    }
+
+    function drawFrameLabel(context, label, x, y, color, fontSize, frameWidth) {
+      const paddingX = Math.max(5, fontSize * .38);
+      const labelHeight = fontSize + Math.max(7, fontSize * .45);
+      const labelWidth = context.measureText(label).width + paddingX * 2;
+      const left = Math.max(0, Math.min(Math.max(0, frameWidth - labelWidth), x));
+      const top = y >= labelHeight ? y - labelHeight : y;
+      context.fillStyle = color;
+      context.fillRect(left, top, labelWidth, labelHeight);
+      context.fillStyle = "#06131b";
+      context.fillText(label, left + paddingX, top + labelHeight / 2);
+    }
+
+    function updateResolutionNote(data) {
+      const riders = data.heads ?? data.riders ?? [];
+      const smallHeads = riders.filter((rider) => {
+        const box = rider.head_bbox;
+        return box && box.length === 4
+          && (box[2] - box[0] < 24 || box[3] - box[1] < 24);
+      }).length;
+      const unknown = riders.filter((rider) => rider.helmet?.status === "unknown").length;
+      const possibleHelmets = riders.filter((rider) => rider.helmet?.status === "unknown"
+        && Number(rider.helmet?.helmet_probability || 0) > 0.50).length;
+      const note = $("#resolutionNote");
+      if (smallHeads || possibleHelmets) {
+        const details = [];
+        if (smallHeads) details.push(`${smallHeads} of ${riders.length} rider head crops are under 24 px on at least one edge`);
+        if (possibleHelmets) details.push(`${possibleHelmets} uncertain crops show H? because the model favors helmet but cannot confirm it`);
+        note.textContent = `${details.join(". ")}. H? is a candidate, not a confirmed helmet. Use a higher-resolution source or review the head crop.`;
+        note.hidden = false;
+      } else if (unknown) {
+        note.textContent = `${unknown} rider helmet checks are uncertain because the head is occluded or the image detail is limited.`;
+        note.hidden = false;
+      } else {
+        note.hidden = true;
+      }
+    }
+
+    function clearLiveOverlay() {
+      liveOverlayContext.clearRect(0, 0, liveOverlay.width, liveOverlay.height);
+      liveOverlay.hidden = true;
+      liveOverlay.width = 0;
+      liveOverlay.height = 0;
+    }
+
+    function drawLiveOverlay(data) {
+      const width = Number(data.width);
+      const height = Number(data.height);
+      if (!width || !height) return;
+      if (liveOverlay.width !== width || liveOverlay.height !== height) {
+        liveOverlay.width = width;
+        liveOverlay.height = height;
+      }
+      liveOverlay.hidden = false;
+      const context = liveOverlayContext;
+      context.clearRect(0, 0, width, height);
+      const filters = overlayFilters();
+      const lineWidth = Math.max(2, Math.min(5, width * .0025));
+      const fontSize = Math.max(13, Math.min(23, width * .017));
+      context.lineWidth = lineWidth;
+      context.font = `700 ${fontSize}px ui-sans-serif, system-ui, sans-serif`;
+      context.textBaseline = "middle";
+
+      for (const vehicle of data.vehicles || []) {
+        if ((vehicle.vehicle_type === "motorcycle" && !filters.motorcycles)
+          || (vehicle.vehicle_type === "bicycle" && !filters.bicycles)
+          || Number(vehicle.confidence || 0) < filters.confidence) continue;
+        const [x1, y1, x2, y2] = vehicle.bbox || [];
+        if (![x1, y1, x2, y2].every(Number.isFinite)) continue;
+        const color = vehicle.vehicle_type === "bicycle" ? "#c7f36b" : "#53d7e7";
+        context.strokeStyle = color;
+        context.fillStyle = color;
+        context.strokeRect(x1, y1, x2 - x1, y2 - y1);
+        const label = `${vehicle.vehicle_type === "bicycle" ? "BIKE" : "MOTO"} · ${vehicle.track_id}`;
+        drawOverlayLabel(context, label, x1, y1, color, fontSize);
+      }
+
+      for (const rider of data.heads ?? data.riders ?? []) {
+        const status = rider.helmet?.status || "unknown";
+        const possibleHelmet = status === "unknown"
+          && Number(rider.helmet?.helmet_probability || 0) > 0.50;
+        const visible = status === "helmet" ? filters.helmet
+          : (status === "no_helmet" ? filters.noHelmet : filters.unknown);
+        if (!visible || Number(rider.helmet?.confidence || 0) < filters.confidence) continue;
+        const box = rider.helmet_bbox || rider.head_bbox;
+        if (!box || box.length !== 4) continue;
+        const [x1, y1, x2, y2] = box;
+        const color = status === "helmet"
+          ? "#9df070"
+          : (status === "no_helmet" ? "#ff6868" : "#f4bd5b");
+        context.strokeStyle = color;
+        context.fillStyle = color;
+        context.strokeRect(x1, y1, x2 - x1, y2 - y1);
+        const label = status === "helmet" ? "HELMET"
+          : (status === "no_helmet" ? "NO HELMET" : (possibleHelmet ? "HELMET?" : "CHECK"));
+        drawOverlayLabel(context, label, x1, y1, color, fontSize);
+      }
+      if (filters.noMoto) {
+        for (const person of data.persons || []) {
+          if (person.motorcycle_status !== "no_motorcycle_match"
+            || Number(person.confidence || 0) < filters.confidence) continue;
+          const [x1, y1, x2, y2] = person.bbox || [];
+          if (![x1, y1, x2, y2].every(Number.isFinite)) continue;
+          context.strokeStyle = "#a5b6bd";
+          context.strokeRect(x1, y1, x2 - x1, y2 - y1);
+          drawOverlayLabel(context, "NO MOTO MATCH", x1, y1, "#a5b6bd", fontSize);
+        }
+      }
+    }
+
+    function drawOverlayLabel(context, label, x, y, color, fontSize) {
+      const paddingX = Math.max(5, fontSize * .38);
+      const labelHeight = fontSize + Math.max(7, fontSize * .45);
+      const labelWidth = context.measureText(label).width + paddingX * 2;
+      const maxX = Math.max(0, liveOverlay.width - labelWidth);
+      const left = Math.max(0, Math.min(maxX, x));
+      const top = y >= labelHeight ? y - labelHeight : y;
+      context.fillStyle = color;
+      context.fillRect(left, top, labelWidth, labelHeight);
+      context.fillStyle = "#06131b";
+      context.fillText(label, left + paddingX, top + labelHeight / 2);
+    }
+
+    async function readResponse(response) {
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(data.detail || `Request failed (${response.status}).`);
+      return data;
+    }
+
+    async function analyzeFile(file, timestamp = null) {
+      if (!file) return;
+      const button = $("#runImage");
+      resetOverlayFilters();
+      $("#annotationEditor").hidden = true;
+      button.disabled = true;
+      setMessage("Analyzing image on the local server…");
+      const body = new FormData();
+      body.append("file", file);
+      try {
+        const data = await readResponse(await fetch("/api/detect", { method: "POST", body }));
+        setSummary(data.summary || {});
+        $("#details").textContent = JSON.stringify(data, null, 2);
+        renderResults(URL.createObjectURL(file), data.annotated_image, data);
+        latestReviewFrame = { file, fileName: file.name || "review.jpg", detections: data.detections || [], riders: data.heads ?? data.riders ?? [] };
+        $("#reviewCurrentFrame").hidden = false;
+        beginAnnotationReview(file, file.name || "review.jpg", data.detections || []);
+        beginHelmetReview(file, file.name || "review.jpg", data.heads ?? data.riders ?? [], timestamp);
+        setMessage("Image analysis complete.");
+      } catch (error) {
+        setMessage(error.message, true);
+        if (error.message.includes("Detector model not found")) {
+          $("#summaryCaption").textContent = "Model required to analyze frames";
+        }
+      } finally {
+        button.disabled = !$("#imageFile").files.length;
+      }
+    }
+
+    function updateAnnotationControls() {
+      $("#drawMotorcycle").setAttribute("aria-pressed", String(drawAnnotationMode));
+      annotationCanvas.classList.toggle("drawing", drawAnnotationMode);
+      $("#removeMotorcycle").disabled = selectedAnnotation < 0 || annotationSaving;
+      $("#undoAnnotation").disabled = !annotationUndo.length || annotationSaving;
+      $("#drawMotorcycle").disabled = annotationSaving;
+      annotationCanvas.style.pointerEvents = annotationSaving ? "none" : "";
+      $("#saveAnnotation").disabled = !annotationFile || annotationSaving || (annotationSaved && !annotationDirty);
+      $("#saveAnnotation").textContent = annotationSaving
+        ? "Saving…"
+        : (annotationSaved && !annotationDirty ? "Frame saved" : "Save reviewed frame");
+    }
+
+    function updateAnnotationStatus(messageText) {
+      const count = annotationBoxes.length;
+      $("#annotationStatus").textContent = messageText || `${count} motorcycle ${count === 1 ? "box" : "boxes"}. Review every visible motorcycle, then save this frame.`;
+      updateAnnotationControls();
+    }
+
+    function drawAnnotationCanvas() {
+      if (!annotationImage || !annotationCanvas.width || !annotationCanvas.height) return;
+      const context = annotationContext;
+      context.clearRect(0, 0, annotationCanvas.width, annotationCanvas.height);
+      context.drawImage(annotationImage, 0, 0, annotationCanvas.width, annotationCanvas.height);
+      const lineWidth = Math.max(2, Math.min(6, annotationCanvas.width * 0.003));
+      const fontSize = Math.max(13, Math.min(24, annotationCanvas.width * 0.018));
+      context.font = `600 ${fontSize}px ui-sans-serif, system-ui, sans-serif`;
+      annotationBoxes.forEach((box, index) => {
+        const [x1, y1, x2, y2] = box;
+        const selected = index === selectedAnnotation;
+        context.lineWidth = lineWidth * (selected ? 1.5 : 1);
+        context.strokeStyle = selected ? "#c7f36b" : "#53d7e7";
+        context.fillStyle = selected ? "rgba(199, 243, 107, .12)" : "rgba(83, 215, 231, .08)";
+        context.fillRect(x1, y1, x2 - x1, y2 - y1);
+        context.strokeRect(x1, y1, x2 - x1, y2 - y1);
+        const label = `Moto ${index + 1}`;
+        const labelWidth = context.measureText(label).width + 12;
+        const labelY = Math.max(fontSize + 6, y1);
+        context.fillStyle = selected ? "#c7f36b" : "#53d7e7";
+        context.fillRect(x1, labelY - fontSize - 7, labelWidth, fontSize + 7);
+        context.fillStyle = "#06131b";
+        context.fillText(label, x1 + 6, labelY - 5);
+      });
+      if (annotationDraft) {
+        const [x1, y1, x2, y2] = annotationDraft;
+        context.save();
+        context.setLineDash([8, 5]);
+        context.lineWidth = lineWidth;
+        context.strokeStyle = "#c7f36b";
+        context.fillStyle = "rgba(199, 243, 107, .16)";
+        context.fillRect(x1, y1, x2 - x1, y2 - y1);
+        context.strokeRect(x1, y1, x2 - x1, y2 - y1);
+        context.restore();
+      }
+    }
+
+    function beginAnnotationReview(file, fileName, detections) {
+      if (annotationImageUrl) URL.revokeObjectURL(annotationImageUrl);
+      annotationCanvas.width = 0;
+      annotationCanvas.height = 0;
+      annotationFile = file;
+      annotationFileName = fileName;
+      annotationImageUrl = URL.createObjectURL(file);
+      annotationImage = new Image();
+      annotationImage.onload = () => {
+        annotationCanvas.width = annotationImage.naturalWidth;
+        annotationCanvas.height = annotationImage.naturalHeight;
+        drawAnnotationCanvas();
+      };
+      annotationImage.onerror = () => updateAnnotationStatus("Could not load this image for correction.");
+      annotationImage.src = annotationImageUrl;
+      annotationBoxes = detections
+        .filter((item) => ["motorcycle", "motorbike", "moto"].includes(String(item.class_name || "").toLowerCase()))
+        .map((item) => Array.isArray(item.bbox) ? item.bbox.map(Number) : [])
+        .filter((box) => box.length === 4 && box.every(Number.isFinite));
+      annotationUndo = [];
+      selectedAnnotation = -1;
+      drawAnnotationMode = false;
+      annotationDragStart = null;
+      annotationDraft = null;
+      annotationDirty = false;
+      annotationSaved = false;
+      annotationSaving = false;
+      $("#annotationEditor").hidden = false;
+      drawAnnotationCanvas();
+      updateAnnotationStatus();
+      $("#annotationEditor").scrollIntoView({ behavior: "smooth", block: "nearest" });
+    }
+
+    function pushAnnotationUndo() {
+      annotationUndo.push({ boxes: annotationBoxes.map((box) => [...box]), selected: selectedAnnotation });
+      if (annotationUndo.length > 40) annotationUndo.shift();
+      annotationDirty = true;
+      annotationSaved = false;
+    }
+
+    function pointOnAnnotationCanvas(event) {
+      const rect = annotationCanvas.getBoundingClientRect();
+      return {
+        x: Math.max(0, Math.min(annotationCanvas.width, (event.clientX - rect.left) * annotationCanvas.width / rect.width)),
+        y: Math.max(0, Math.min(annotationCanvas.height, (event.clientY - rect.top) * annotationCanvas.height / rect.height)),
+      };
+    }
+
+    function normalizedAnnotationBox(first, second) {
+      return [Math.min(first.x, second.x), Math.min(first.y, second.y), Math.max(first.x, second.x), Math.max(first.y, second.y)];
+    }
+
+    function selectAnnotationAt(point) {
+      let match = -1;
+      let smallestArea = Infinity;
+      annotationBoxes.forEach(([x1, y1, x2, y2], index) => {
+        if (point.x >= x1 && point.x <= x2 && point.y >= y1 && point.y <= y2) {
+          const area = (x2 - x1) * (y2 - y1);
+          if (area < smallestArea) { match = index; smallestArea = area; }
+        }
+      });
+      selectedAnnotation = match;
+      drawAnnotationCanvas();
+      updateAnnotationStatus(match < 0 ? "No box selected. Draw a missed motorcycle or click a box to select it." : `Selected motorcycle box ${match + 1}. Remove it if it is a false detection.`);
+    }
+
+    function updateAnnotationCollection(stats) {
+      const images = Number(stats.images || 0);
+      const boxes = Number(stats.boxes || 0);
+      const sequences = Number(stats.sequences || 0);
+      $("#annotationCollection").textContent = `${images} reviewed ${images === 1 ? "frame" : "frames"} · ${boxes} boxes · ${sequences} capture ${sequences === 1 ? "group" : "groups"}`;
+      $("#exportAnnotations").disabled = !stats.export_ready;
+      $("#annotationStatus").title = stats.export_ready
+        ? "Dataset is ready to export."
+        : "Save reviewed frames from at least two different capture groups to export.";
+    }
+
+    async function refreshAnnotationCollection() {
+      try {
+        updateAnnotationCollection(await readResponse(await fetch("/api/annotations/stats")));
+      } catch (_) {
+        $("#annotationCollection").textContent = "Local annotation storage unavailable";
+      }
+    }
+
+    async function saveReviewedFrame() {
+      if (!annotationFile || annotationSaving) return;
+      const sequence = $("#annotationSequence").value.trim();
+      if (!sequence) return updateAnnotationStatus("Enter a capture group name. Use the same name for frames from the same video or scene.");
+      const body = new FormData();
+      body.append("file", annotationFile, annotationFileName || "review.jpg");
+      body.append("annotations", JSON.stringify(annotationBoxes));
+      body.append("sequence", sequence);
+      annotationSaving = true;
+      updateAnnotationControls();
+      updateAnnotationStatus("Saving the reviewed image and YOLO labels locally…");
+      try {
+        const saved = await readResponse(await fetch("/api/annotations", { method: "POST", body }));
+        annotationSaved = true;
+        annotationDirty = false;
+        updateAnnotationCollection(saved);
+        updateAnnotationStatus(`Saved ${saved.box_count} motorcycle ${saved.box_count === 1 ? "box" : "boxes"}. Review other images and assign different capture groups to independent scenes.`);
+      } catch (error) {
+        updateAnnotationStatus(error.message);
+      } finally {
+        annotationSaving = false;
+        updateAnnotationControls();
+      }
+    }
+
+    function setHelmetReviewMessage(messageText) {
+      const selected = helmetReviewSamples.filter((sample) => sample.label !== "unknown").length;
+      $("#helmetReviewStatus").textContent = messageText || `${helmetReviewSamples.length} rider crops · ${selected} explicitly labeled · the model's status has not been accepted as ground truth.`;
+      $("#saveHelmetReview").disabled = !helmetReviewFile || helmetReviewSaving;
+    }
+
+    function helmetReviewBoxColor(sample) {
+      if (sample.label === "helmet") return "#7af0a0";
+      if (sample.label === "no_helmet") return "#ff8e7a";
+      return sample.manually_added ? "#ffd166" : "#55d8e8";
+    }
+
+    function drawHelmetReviewCanvas() {
+      if (!helmetReviewImage || !helmetReviewCanvas.width || !helmetReviewCanvas.height) return;
+      const width = helmetReviewCanvas.width;
+      const height = helmetReviewCanvas.height;
+      helmetReviewContext.clearRect(0, 0, width, height);
+      helmetReviewContext.drawImage(helmetReviewImage, 0, 0, width, height);
+      helmetReviewSamples.forEach((sample, index) => {
+        const [x1, y1, x2, y2] = sample.bbox;
+        helmetReviewContext.strokeStyle = helmetReviewBoxColor(sample);
+        helmetReviewContext.lineWidth = Math.max(2, Math.min(width, height) / 360);
+        helmetReviewContext.strokeRect(x1, y1, x2 - x1, y2 - y1);
+        const tag = sample.manually_added ? `MISSED ${index + 1}` : `${index + 1}`;
+        helmetReviewContext.font = `600 ${Math.max(11, Math.min(width, height) / 42)}px ui-sans-serif, system-ui, sans-serif`;
+        const tagWidth = helmetReviewContext.measureText(tag).width + 10;
+        const tagHeight = Math.max(18, Math.min(width, height) / 28);
+        helmetReviewContext.fillStyle = helmetReviewBoxColor(sample);
+        helmetReviewContext.fillRect(x1, Math.max(0, y1 - tagHeight), tagWidth, tagHeight);
+        helmetReviewContext.fillStyle = "#06121a";
+        helmetReviewContext.fillText(tag, x1 + 5, Math.max(12, y1 - tagHeight / 4));
+      });
+      if (missedHeadDraft) {
+        const [x1, y1, x2, y2] = missedHeadDraft;
+        helmetReviewContext.save();
+        helmetReviewContext.strokeStyle = "#ffd166";
+        helmetReviewContext.lineWidth = Math.max(2, Math.min(width, height) / 300);
+        helmetReviewContext.setLineDash([8, 5]);
+        helmetReviewContext.strokeRect(x1, y1, x2 - x1, y2 - y1);
+        helmetReviewContext.restore();
+      }
+    }
+
+    function pointOnHelmetReviewCanvas(event) {
+      const rect = helmetReviewCanvas.getBoundingClientRect();
+      return {
+        x: Math.max(0, Math.min(helmetReviewCanvas.width, (event.clientX - rect.left) * helmetReviewCanvas.width / rect.width)),
+        y: Math.max(0, Math.min(helmetReviewCanvas.height, (event.clientY - rect.top) * helmetReviewCanvas.height / rect.height)),
+      };
+    }
+
+    function renderHelmetReviewCards() {
+      const grid = $("#helmetReviewGrid");
+      grid.replaceChildren();
+      if (!helmetReviewSamples.length) {
+        const empty = document.createElement("p");
+        empty.className = "helmet-review-help";
+        empty.textContent = "No rider head crops yet. Turn on Add missed rider head and draw a box around a visible head.";
+        grid.append(empty);
+        setHelmetReviewMessage("No rider heads were detected. Add missed head crops on the frame to review them.");
+        return;
+      }
+      helmetReviewSamples.forEach((sample, index) => {
+        const [rawX1, rawY1, rawX2, rawY2] = sample.bbox;
+        const x1 = Math.max(0, Math.floor(rawX1));
+        const y1 = Math.max(0, Math.floor(rawY1));
+        const x2 = Math.min(helmetReviewImage.naturalWidth, Math.ceil(rawX2));
+        const y2 = Math.min(helmetReviewImage.naturalHeight, Math.ceil(rawY2));
+        const cropWidth = Math.max(1, x2 - x1);
+        const cropHeight = Math.max(1, y2 - y1);
+        const canvas = document.createElement("canvas");
+        canvas.width = cropWidth;
+        canvas.height = cropHeight;
+        canvas.getContext("2d").drawImage(helmetReviewImage, x1, y1, cropWidth, cropHeight, 0, 0, cropWidth, cropHeight);
+
+        const card = document.createElement("article");
+        card.className = "helmet-review-card";
+        const head = document.createElement("div");
+        head.className = "helmet-review-card-head";
+        const title = document.createElement("strong");
+        title.textContent = sample.manually_added ? `Missed head ${index + 1}` : `Rider ${sample.track_id ?? index + 1}`;
+        const size = document.createElement("span");
+        size.textContent = `${cropWidth}×${cropHeight}`;
+        head.append(title, size);
+        const image = document.createElement("img");
+        image.alt = `Head crop for ${title.textContent}`;
+        image.src = canvas.toDataURL("image/jpeg", .92);
+        const prediction = document.createElement("div");
+        prediction.className = "model-prediction";
+        prediction.textContent = sample.manually_added
+          ? "Not detected by the model · label this crop manually"
+          : `Model: ${sample.model_status.replaceAll("_", " ")} · ${(sample.model_confidence * 100).toFixed(0)}%`;
+        if (Math.min(cropWidth, cropHeight) < 24) {
+          prediction.classList.add("tiny-crop");
+          prediction.textContent += " · very small; prefer Unsure";
+        }
+        const labels = document.createElement("div");
+        labels.className = "helmet-review-labels";
+        for (const [label, caption] of [["helmet", "Helmet"], ["no_helmet", "No helmet"], ["unknown", "Unsure"]]) {
+          const button = document.createElement("button");
+          button.type = "button";
+          button.className = "button quiet";
+          button.textContent = caption;
+          button.setAttribute("aria-pressed", String(sample.label === label));
+          button.addEventListener("click", () => {
+            sample.label = label;
+            labels.querySelectorAll("button").forEach((item) => item.setAttribute("aria-pressed", String(item === button)));
+            drawHelmetReviewCanvas();
+            setHelmetReviewMessage();
+          });
+          labels.append(button);
+        }
+        const actions = document.createElement("div");
+        actions.className = "helmet-review-actions";
+        const correctBox = document.createElement("button");
+        correctBox.type = "button";
+        correctBox.className = "button quiet";
+        correctBox.textContent = "Correct head box";
+        correctBox.addEventListener("click", () => {
+          correctingHeadIndex = index;
+          drawMissedHeadMode = true;
+          $("#drawMissedHead").setAttribute("aria-pressed", "true");
+          helmetReviewCanvas.classList.add("drawing");
+          setHelmetReviewMessage("Draw the corrected head box on the frame. The original runtime crop is retained for training.");
+        });
+        const remove = document.createElement("button");
+        remove.type = "button";
+        remove.className = "button quiet";
+        remove.textContent = "Remove non-rider";
+        remove.addEventListener("click", () => {
+          helmetReviewSamples.splice(index, 1);
+          correctingHeadIndex = null;
+          renderHelmetReviewCards();
+          drawHelmetReviewCanvas();
+        });
+        const reference = document.createElement("input");
+        reference.type = "text";
+        reference.maxLength = 120;
+        reference.placeholder = "Same rider across frames (optional)";
+        reference.setAttribute("aria-label", "Human rider reference across frames");
+        reference.value = sample.entity_id || "";
+        reference.addEventListener("input", () => { sample.entity_id = reference.value.trim(); });
+        const vehicleSelect = document.createElement("select");
+        vehicleSelect.setAttribute("aria-label", "Reviewed rider motorcycle association");
+        const pending = document.createElement("option");
+        pending.value = "";
+        pending.textContent = "Vehicle link unreviewed";
+        vehicleSelect.append(pending);
+        annotationBoxes.forEach((box, vehicleIndex) => {
+          const option = document.createElement("option");
+          option.value = String(vehicleIndex);
+          option.textContent = `Motorcycle box ${vehicleIndex + 1}`;
+          vehicleSelect.append(option);
+        });
+        vehicleSelect.addEventListener("change", () => {
+          sample.vehicle_bbox = vehicleSelect.value === "" ? null : [...annotationBoxes[Number(vehicleSelect.value)]];
+        });
+        actions.append(correctBox, remove, reference, vehicleSelect);
+        card.append(head, image, prediction, labels, actions);
+        grid.append(card);
+      });
+      setHelmetReviewMessage();
+    }
+
+    function beginHelmetReview(file, fileName, riders, timestamp = null) {
+      reviewSourceTimestamp = timestamp;
+      if (helmetReviewImageUrl) URL.revokeObjectURL(helmetReviewImageUrl);
+      helmetReviewFile = file;
+      helmetReviewFileName = fileName || "review.jpg";
+      helmetReviewImageUrl = URL.createObjectURL(file);
+      helmetReviewImage = new Image();
+      helmetReviewSamples = (riders || []).filter((rider) =>
+        Array.isArray(rider.head_bbox) && rider.head_bbox.length === 4
+        && rider.head_bbox.every(Number.isFinite)
+      ).map((rider) => ({
+        bbox: rider.head_bbox.map(Number),
+        runtime_bbox: rider.head_bbox.map(Number),
+        rider_bbox: rider.bbox,
+        vehicle_id: rider.vehicle_id,
+        evidence: rider.evidence,
+        track_id: Number.isInteger(rider.track_id) ? rider.track_id : null,
+        model_status: rider.helmet?.status || "unknown",
+        model_confidence: Number(rider.helmet?.confidence || 0),
+        label: "unknown",
+      }));
+      $("#fullyReviewed").checked = false;
+      correctingHeadIndex = null;
+      drawMissedHeadMode = false;
+      missedHeadDragStart = null;
+      missedHeadDraft = null;
+      $("#drawMissedHead").setAttribute("aria-pressed", "false");
+      helmetReviewCanvas.classList.remove("drawing");
+      $("#helmetReview").hidden = false;
+      $("#helmetReviewGroup").textContent = `Capture group: ${$("#annotationSequence").value.trim() || "set a group name above"}`;
+      helmetReviewImage.onload = () => {
+        helmetReviewCanvas.width = helmetReviewImage.naturalWidth;
+        helmetReviewCanvas.height = helmetReviewImage.naturalHeight;
+        renderHelmetReviewCards();
+        drawHelmetReviewCanvas();
+      };
+      helmetReviewImage.onerror = () => setHelmetReviewMessage("Could not load this image for helmet-status review.");
+      helmetReviewImage.src = helmetReviewImageUrl;
+    }
+
+    async function saveHelmetReview() {
+      if (!helmetReviewFile || helmetReviewSaving) return;
+      const sequence = $("#annotationSequence").value.trim();
+      if (!sequence) return setHelmetReviewMessage("Set a capture group name above before saving.");
+      const body = new FormData();
+      body.append("file", helmetReviewFile, helmetReviewFileName);
+      body.append("samples", JSON.stringify(helmetReviewSamples));
+      body.append("sequence", sequence);
+      body.append("fully_reviewed", String($("#fullyReviewed").checked));
+      if (reviewSourceTimestamp !== null) body.append("timestamp_seconds", String(reviewSourceTimestamp));
+      helmetReviewSaving = true;
+      setHelmetReviewMessage("Saving your explicit rider labels locally…");
+      try {
+        const saved = await readResponse(await fetch("/api/helmet-review", { method: "POST", body }));
+        updateHelmetReviewCollection(saved);
+        setHelmetReviewMessage(`Saved ${saved.known_samples} explicit labels and ${saved.unknown} unsure crops in ${saved.sequences} capture groups.`);
+      } catch (error) {
+        setHelmetReviewMessage(error.message);
+      } finally {
+        helmetReviewSaving = false;
+        $("#saveHelmetReview").disabled = !helmetReviewFile;
+      }
+    }
+
+    function updateHelmetReviewCollection(stats) {
+      $("#helmetReviewCollection").textContent = `${stats.images || 0} frames · ${stats.helmet || 0} helmet · ${stats.no_helmet || 0} no helmet · ${stats.unknown || 0} unsure · ${stats.sequences || 0} groups`;
+      $("#exportHelmetReview").disabled = !stats.export_ready;
+    }
+
+    async function refreshHelmetReviewCollection() {
+      try {
+        updateHelmetReviewCollection(await readResponse(await fetch("/api/helmet-review/stats")));
+      } catch (_) {
+        $("#helmetReviewCollection").textContent = "Local helmet review storage unavailable";
+      }
+    }
+
+    $("#reviewCurrentFrame").addEventListener("click", () => {
+      if (!latestReviewFrame) return;
+      beginAnnotationReview(latestReviewFrame.file, latestReviewFrame.fileName, latestReviewFrame.detections);
+      beginHelmetReview(latestReviewFrame.file, latestReviewFrame.fileName, latestReviewFrame.riders, latestReviewFrame.timestamp_seconds);
+      $("#helmetReview").scrollIntoView({ behavior: "smooth", block: "nearest" });
+    });
+    $("#saveHelmetReview").addEventListener("click", saveHelmetReview);
+    $("#exportHelmetReview").addEventListener("click", () => window.location.assign("/api/helmet-review/export"));
+    $("#drawMissedHead").addEventListener("click", () => {
+      correctingHeadIndex = null;
+      drawMissedHeadMode = !drawMissedHeadMode;
+      $("#drawMissedHead").setAttribute("aria-pressed", String(drawMissedHeadMode));
+      helmetReviewCanvas.classList.toggle("drawing", drawMissedHeadMode);
+      missedHeadDraft = null;
+      drawHelmetReviewCanvas();
+      setHelmetReviewMessage(drawMissedHeadMode
+        ? "Drag tightly around a rider's helmet/head in the frame. The new crop starts as Unsure until you label it."
+        : "Add missed-head drawing is off. Select a crop below to correct its label.");
+    });
+    helmetReviewCanvas.addEventListener("pointerdown", (event) => {
+      if (!drawMissedHeadMode || !helmetReviewImage || helmetReviewSaving || !helmetReviewCanvas.width) return;
+      event.preventDefault();
+      missedHeadDragStart = pointOnHelmetReviewCanvas(event);
+      missedHeadDraft = [missedHeadDragStart.x, missedHeadDragStart.y, missedHeadDragStart.x, missedHeadDragStart.y];
+      helmetReviewCanvas.setPointerCapture(event.pointerId);
+      drawHelmetReviewCanvas();
+    });
+    helmetReviewCanvas.addEventListener("pointermove", (event) => {
+      if (!missedHeadDragStart) return;
+      const point = pointOnHelmetReviewCanvas(event);
+      missedHeadDraft = [
+        Math.min(missedHeadDragStart.x, point.x),
+        Math.min(missedHeadDragStart.y, point.y),
+        Math.max(missedHeadDragStart.x, point.x),
+        Math.max(missedHeadDragStart.y, point.y),
+      ];
+      drawHelmetReviewCanvas();
+    });
+    helmetReviewCanvas.addEventListener("pointerup", (event) => {
+      if (!missedHeadDragStart) return;
+      const point = pointOnHelmetReviewCanvas(event);
+      const box = [
+        Math.min(missedHeadDragStart.x, point.x),
+        Math.min(missedHeadDragStart.y, point.y),
+        Math.max(missedHeadDragStart.x, point.x),
+        Math.max(missedHeadDragStart.y, point.y),
+      ];
+      missedHeadDragStart = null;
+      missedHeadDraft = null;
+      if (box[2] - box[0] >= 4 && box[3] - box[1] >= 4) {
+        if (correctingHeadIndex !== null && helmetReviewSamples[correctingHeadIndex]) {
+          helmetReviewSamples[correctingHeadIndex].bbox = box;
+          correctingHeadIndex = null;
+          drawMissedHeadMode = false;
+          $("#drawMissedHead").setAttribute("aria-pressed", "false");
+          helmetReviewCanvas.classList.remove("drawing");
+        } else helmetReviewSamples.push({
+          bbox: box,
+          track_id: null,
+          model_status: "not_detected",
+          model_confidence: 0,
+          label: "unknown",
+          manually_added: true,
+        });
+        renderHelmetReviewCards();
+        drawHelmetReviewCanvas();
+        setHelmetReviewMessage("Added a missed rider head. Select Helmet, No helmet, or Unsure on its crop card.");
+      } else {
+        drawHelmetReviewCanvas();
+        setHelmetReviewMessage("That crop is too small. Drag around the visible head and helmet, then label the crop.");
+      }
+    });
+    helmetReviewCanvas.addEventListener("pointercancel", () => {
+      missedHeadDragStart = null;
+      missedHeadDraft = null;
+      drawHelmetReviewCanvas();
+    });
+    $("#annotationSequence").addEventListener("input", () => {
+      $("#helmetReviewGroup").textContent = `Capture group: ${$("#annotationSequence").value.trim() || "set a group name above"}`;
+    });
+    refreshHelmetReviewCollection();
+
+    annotationCanvas.addEventListener("pointerdown", (event) => {
+      if (!annotationImage || !annotationCanvas.width || annotationSaving) return;
+      event.preventDefault();
+      const point = pointOnAnnotationCanvas(event);
+      if (drawAnnotationMode) {
+        annotationDragStart = point;
+        annotationDraft = [point.x, point.y, point.x, point.y];
+        annotationCanvas.setPointerCapture(event.pointerId);
+        drawAnnotationCanvas();
+      } else {
+        selectAnnotationAt(point);
+      }
+    });
+    annotationCanvas.addEventListener("pointermove", (event) => {
+      if (!annotationDragStart) return;
+      annotationDraft = normalizedAnnotationBox(annotationDragStart, pointOnAnnotationCanvas(event));
+      drawAnnotationCanvas();
+    });
+    annotationCanvas.addEventListener("pointerup", (event) => {
+      if (!annotationDragStart) return;
+      const box = normalizedAnnotationBox(annotationDragStart, pointOnAnnotationCanvas(event));
+      annotationDragStart = null;
+      annotationDraft = null;
+      if (box[2] - box[0] >= 4 && box[3] - box[1] >= 4) {
+        pushAnnotationUndo();
+        annotationBoxes.push(box);
+        selectedAnnotation = annotationBoxes.length - 1;
+        drawAnnotationCanvas();
+        updateAnnotationStatus(`Added motorcycle box ${annotationBoxes.length}. Keep drawing or switch off the draw tool to select and remove boxes.`);
+      } else {
+        drawAnnotationCanvas();
+        updateAnnotationStatus("That box was too small. Drag around the motorcycle, including its visible wheels and body.");
+      }
+    });
+    annotationCanvas.addEventListener("pointercancel", () => {
+      annotationDragStart = null;
+      annotationDraft = null;
+      drawAnnotationCanvas();
+    });
+    $("#drawMotorcycle").addEventListener("click", () => {
+      drawAnnotationMode = !drawAnnotationMode;
+      updateAnnotationStatus(drawAnnotationMode ? "Drag around a missed motorcycle to add a box." : "Draw tool off. Click a box to select it.");
+    });
+    $("#removeMotorcycle").addEventListener("click", () => {
+      if (selectedAnnotation < 0) return;
+      pushAnnotationUndo();
+      annotationBoxes.splice(selectedAnnotation, 1);
+      selectedAnnotation = -1;
+      drawAnnotationCanvas();
+      updateAnnotationStatus("Removed the selected box. Undo is available if this was a mistake.");
+    });
+    $("#undoAnnotation").addEventListener("click", () => {
+      const previous = annotationUndo.pop();
+      if (!previous) return;
+      annotationBoxes = previous.boxes;
+      selectedAnnotation = previous.selected;
+      annotationDirty = true;
+      annotationSaved = false;
+      drawAnnotationCanvas();
+      updateAnnotationStatus("Undid the last box edit.");
+    });
+    $("#saveAnnotation").addEventListener("click", saveReviewedFrame);
+    $("#exportAnnotations").addEventListener("click", () => window.location.assign("/api/annotations/export"));
+
+    async function refreshDevices() {
+      if (!navigator.mediaDevices?.enumerateDevices) return;
+      const priorValue = deviceSelect.value;
+      try {
+        const devices = (await navigator.mediaDevices.enumerateDevices())
+          .filter((device) => device.kind === "videoinput");
+        deviceSelect.replaceChildren(new Option("Default camera", ""));
+        devices.forEach((device, index) => {
+          const label = device.label || `Camera ${index + 1}`;
+          deviceSelect.add(new Option(label, device.deviceId));
+        });
+        if (devices.some((device) => device.deviceId === priorValue)) deviceSelect.value = priorValue;
+      } catch (_) {
+        setMessage("Could not list camera devices. You can still try the default camera.", true);
+      }
+    }
+
+    function stopCamera() {
+      stopContinuousAnalysis("camera");
+      clearLiveOverlay();
+      $("#toggleLiveAnalysis").textContent = "Start live detection";
+      const stoppedSessionId = serverCameraSessionId;
+      serverCameraSessionId = null;
+      if (stoppedSessionId) {
+        fetch("/api/camera/stop", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ session_id: stoppedSessionId }),
+          keepalive: true,
+        }).catch(() => {});
+      }
+      if (browserStream) {
+        browserStream.getTracks().forEach((track) => track.stop());
+        browserStream = null;
+      }
+      video.pause();
+      video.srcObject = null;
+      video.hidden = true;
+      serverFeed.removeAttribute("src");
+      serverFeed.hidden = true;
+      if (serverStatsTimer) clearInterval(serverStatsTimer);
+      serverStatsTimer = null;
+      $("#cameraEmpty").hidden = false;
+      $("#feedLabel").textContent = "No input";
+      $("#feedState").textContent = "Standby";
+      $("#feedState").classList.remove("live");
+      $("#frameSize").textContent = "— × —";
+      setCameraButtons(false);
+    }
+
+    async function connectCamera() {
+      const source = sourceSelect.value;
+      setCameraButtons(false, true);
+      $("#feedState").textContent = "Connecting";
+      setMessage("Connecting to camera…");
+      try {
+        if (source === "browser") {
+          if (!navigator.mediaDevices?.getUserMedia) {
+            throw new Error("Browser camera access requires localhost or HTTPS. Open this app on the same computer or use a secure URL.");
+          }
+          const videoConstraint = deviceSelect.value
+            ? { deviceId: { exact: deviceSelect.value }, width: { ideal: $("#captureQuality").value === "original" ? 1920 : Number($("#captureQuality").value) }, height: { ideal: $("#captureQuality").value === "original" ? 1080 : Math.round(Number($("#captureQuality").value) * 9 / 16) } }
+            : { width: { ideal: $("#captureQuality").value === "original" ? 1920 : Number($("#captureQuality").value) }, height: { ideal: $("#captureQuality").value === "original" ? 1080 : Math.round(Number($("#captureQuality").value) * 9 / 16) } };
+          browserStream = await navigator.mediaDevices.getUserMedia({ audio: false, video: videoConstraint });
+          video.srcObject = browserStream;
+          await video.play();
+          video.hidden = false;
+          $("#cameraEmpty").hidden = true;
+          $("#feedLabel").textContent = "Computer camera";
+          $("#frameSize").textContent = `${video.videoWidth} × ${video.videoHeight}`;
+          $("#feedHint").textContent = "Live preview and continuous local inference are active";
+          $("#feedState").textContent = "Live";
+          $("#feedState").classList.add("live");
+          await refreshDevices();
+          setCameraButtons(true);
+          $("#results").hidden = true;
+          $("#annotationEditor").hidden = true;
+          lastBrowserInferenceAt = 0;
+          browserAnalysisFps = 0;
+          browserAnalysisFrames = 0;
+          setMessage("Camera connected. Motorcycle and helmet detection is starting automatically.");
+          void startBrowserAnalysis();
+          video.onloadedmetadata = () => {
+            $("#frameSize").textContent = `${video.videoWidth} × ${video.videoHeight}`;
+          };
+          browserStream.getVideoTracks()[0]?.addEventListener("ended", () => {
+            stopCamera();
+            setMessage("Camera disconnected by the browser or operating system.", true);
+          }, { once: true });
+          return;
+        }
+
+        const isRtspCamera = source === "rtsp";
+        let streamUrl;
+        let feedLabel;
+        if (isRtspCamera) {
+          const url = $("#rtspUrl").value.trim();
+          if (!url) throw new Error("Enter the RTSP URL from your CCTV camera.");
+          const session = await readResponse(await fetch("/api/camera/rtsp/session", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ url }),
+          }));
+          serverCameraSessionId = session.session_id;
+          streamUrl = `/api/camera/rtsp/stream/${encodeURIComponent(session.session_id)}?t=${Date.now()}`;
+          feedLabel = "Network CCTV";
+        } else {
+          const serverSource = source === "picamera" ? "picamera" : "webcam";
+          serverCameraSessionId = window.crypto?.randomUUID
+            ? window.crypto.randomUUID()
+            : `camera-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+          streamUrl = `/api/camera/stream?source=${serverSource}&session_id=${encodeURIComponent(serverCameraSessionId)}&quality=${encodeURIComponent($("#captureQuality").value)}&t=${Date.now()}`;
+          feedLabel = source === "picamera" ? "Raspberry Pi Camera" : "App host webcam";
+        }
+        serverFeed.onload = () => {
+          $("#cameraEmpty").hidden = true;
+          $("#feedLabel").textContent = feedLabel;
+          $("#feedState").textContent = "Live";
+          $("#feedState").classList.add("live");
+          setMessage(detectorAvailable
+            ? "Live camera feed connected. Frames are being analyzed."
+            : "Live preview connected. Add detector weights to analyze frames.");
+        };
+        serverFeed.onerror = () => {
+          stopCamera();
+          setMessage("The app host camera could not start. Try the computer camera source or check camera access on the host.", true);
+        };
+        serverFeed.src = streamUrl;
+        serverFeed.hidden = false;
+        $("#cameraEmpty").hidden = true;
+        setCameraButtons(true);
+        setMessage(isRtspCamera ? "Connecting to the network CCTV stream…" : "Connecting to the camera attached to the app host…");
+        serverStatsTimer = setInterval(async () => {
+          try {
+            const stats = await readResponse(await fetch("/api/camera/stats"));
+            if (stats.summary) setSummary(stats.summary);
+            $("#details").textContent = JSON.stringify(stats, null, 2);
+          } catch (_) {}
+        }, 900);
+      } catch (error) {
+        stopCamera();
+        const errorNames = {
+          NotAllowedError: "Camera permission was denied. Allow camera access for this site, then try again.",
+          NotFoundError: "No camera was found. Connect a camera or choose another device.",
+          NotReadableError: "The camera is busy or unavailable. Close other apps using it, then retry.",
+          OverconstrainedError: "That camera could not use the requested settings. Choose another device.",
+        };
+        setMessage(errorNames[error.name] || error.message || "Could not connect to the camera.", true);
+      }
+    }
+
+    function waitForAnalysisDelay(milliseconds) {
+      return new Promise((resolve) => window.setTimeout(resolve, milliseconds));
+    }
+
+    function formatDuration(seconds) {
+      if (!Number.isFinite(seconds)) return "duration unknown";
+      const wholeSeconds = Math.max(0, Math.floor(seconds));
+      const minutes = Math.floor(wholeSeconds / 60);
+      return `${minutes}:${String(wholeSeconds % 60).padStart(2, "0")}`;
+    }
+
+    function stopContinuousAnalysis(kind) {
+      if (continuousAnalysisKind !== kind) return;
+      browserAnalysisActive = false;
+      browserAnalysisRunId += 1;
+      browserAnalysisController?.abort();
+      browserAnalysisController = null;
+      continuousAnalysisKind = null;
+    }
+
+    function stopVideoAnalysis() {
+      stopContinuousAnalysis("video");
+      $("#analyzeVideo").textContent = "Start video analysis";
+      $("#videoState").textContent = "Standby";
+      $("#videoState").classList.remove("live");
+    }
+
+    function isAnalysisSourceActive(kind, source) {
+      if (kind === "camera") return browserStream !== null && source === video;
+      return currentMode === "video" && recordedVideoUrl !== null && source === reviewVideo;
+    }
+
+    async function startFrameAnalysis(source, kind) {
+      if (!isAnalysisSourceActive(kind, source) || browserAnalysisActive) return;
+      browserAnalysisActive = true;
+      continuousAnalysisKind = kind;
+      const runId = ++browserAnalysisRunId;
+      const analysisSessionId = window.crypto?.randomUUID
+        ? window.crypto.randomUUID()
+        : `stream-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+      const isRecordedVideo = kind === "video";
+      const button = $(isRecordedVideo ? "#analyzeVideo" : "#toggleLiveAnalysis");
+      button.textContent = isRecordedVideo ? "Pause video analysis" : "Pause live detection";
+      button.disabled = false;
+      if (isRecordedVideo) {
+        $("#videoState").textContent = "Analyzing";
+        $("#videoState").classList.add("live");
+        $("#videoHint").textContent = "Sampled frames are sent to the local detector";
+        $("#annotationEditor").hidden = true;
+        setMessage("Video analysis is running. The next frame is captured after each result is ready.");
+      } else {
+          $("#feedHint").textContent = "Live preview · motorcycle and helmet overlays update as inference completes";
+          setMessage("Live motorcycle and helmet detection is running continuously at local model speed.");
+      }
+
+      while (runId === browserAnalysisRunId && isAnalysisSourceActive(kind, source) && browserAnalysisActive) {
+        if (isRecordedVideo && source.ended) break;
+        if (source.readyState < HTMLMediaElement.HAVE_CURRENT_DATA || !source.videoWidth || !source.videoHeight) {
+          await waitForAnalysisDelay(100);
+          continue;
+        }
+        if (isRecordedVideo && source.paused) {
+          await waitForAnalysisDelay(100);
+          continue;
+        }
+        const cycleStarted = performance.now();
+        let controller = null;
+        try {
+          const limit = Number($("#captureQuality").value) || Infinity;
+          const scale = Math.min(1, limit / Math.max(source.videoWidth, source.videoHeight));
+          browserCaptureCanvas.width = Math.round(source.videoWidth * scale);
+          browserCaptureCanvas.height = Math.round(source.videoHeight * scale);
+          browserCaptureCanvas.getContext("2d").drawImage(
+            source, 0, 0, browserCaptureCanvas.width, browserCaptureCanvas.height
+          );
+          const capturedVideoTime = isRecordedVideo ? Number(source.currentTime) : null;
+          const blob = await new Promise((resolve) => browserCaptureCanvas.toBlob(resolve, "image/jpeg", $("#captureQuality").value === "original" ? .97 : .88));
+          if (!blob) throw new Error("Could not capture a frame from this video source.");
+          controller = new AbortController();
+          browserAnalysisController = controller;
+          const body = new FormData();
+          body.append("file", blob, isRecordedVideo ? "cctv-video-frame.jpg" : "live-camera-frame.jpg");
+          body.append("session_id", analysisSessionId);
+          body.append("timestamp_seconds", String(isRecordedVideo ? capturedVideoTime : cycleStarted / 1000));
+          const data = await readResponse(await fetch("/api/detect", {
+            method: "POST", body, signal: controller.signal,
+          }));
+          if (runId !== browserAnalysisRunId || !browserAnalysisActive) break;
+
+          const completedAt = performance.now();
+          if (lastBrowserInferenceAt) {
+            const instantFps = 1000 / Math.max(1, completedAt - lastBrowserInferenceAt);
+            browserAnalysisFps = browserAnalysisFps
+              ? browserAnalysisFps * .7 + instantFps * .3
+              : instantFps;
+          }
+          lastBrowserInferenceAt = completedAt;
+          browserAnalysisFrames += 1;
+          const fpsLabel = browserAnalysisFps ? `${browserAnalysisFps.toFixed(1)} FPS` : "measuring FPS";
+          setSummary(data.summary || {});
+          $("#summaryCaption").textContent = `${isRecordedVideo ? "Video" : "Live"} analysis · ${fpsLabel}`;
+          const resultDetails = { ...data };
+          delete resultDetails.annotated_image;
+          resultDetails.continuous_analysis = {
+            source: isRecordedVideo ? "recorded_video" : "browser_camera",
+            frames_analyzed: browserAnalysisFrames,
+            approximate_fps: Number(browserAnalysisFps.toFixed(2)),
+            ...(isRecordedVideo ? { video_time_seconds: capturedVideoTime } : {}),
+          };
+          $("#details").textContent = JSON.stringify(resultDetails, null, 2);
+          renderResults(URL.createObjectURL(blob), data.annotated_image, data);
+          latestReviewFrame = {
+            file: blob,
+            fileName: isRecordedVideo ? "cctv-video-frame.jpg" : "live-camera-frame.jpg",
+            detections: data.detections || [],
+            riders: data.heads ?? data.riders ?? [],
+            timestamp_seconds: isRecordedVideo ? capturedVideoTime : cycleStarted / 1000,
+          };
+          $("#reviewCurrentFrame").hidden = false;
+          if (!isRecordedVideo) drawLiveOverlay(data);
+          if (isRecordedVideo) {
+            $("#videoState").textContent = `Analyzing · ${fpsLabel}`;
+            $("#videoState").classList.add("live");
+            setMessage(`Video detection running · ${browserAnalysisFrames} frames analyzed · ${fpsLabel}`);
+          } else {
+            $("#feedState").textContent = `Analyzing · ${fpsLabel}`;
+            $("#feedState").classList.add("live");
+            setMessage(`Live detection running · ${browserAnalysisFrames} frames analyzed · ${fpsLabel}`);
+          }
+        } catch (error) {
+          if (runId !== browserAnalysisRunId || error.name === "AbortError") break;
+          setMessage(error.message || (isRecordedVideo ? "Video analysis failed." : "Live camera analysis failed."), true);
+          if (error.message?.includes("Detector model not found")) {
+            $("#summaryCaption").textContent = "Model required to analyze frames";
+          }
+          break;
+        } finally {
+          if (browserAnalysisController === controller) browserAnalysisController = null;
+        }
+        await waitForAnalysisDelay(Math.max(0, 300 - (performance.now() - cycleStarted)));
+      }
+
+      if (runId === browserAnalysisRunId) {
+        browserAnalysisActive = false;
+        continuousAnalysisKind = null;
+        const sourceConnected = isAnalysisSourceActive(kind, source);
+        if (isRecordedVideo) {
+          button.textContent = source.ended ? "Replay video analysis" : "Resume video analysis";
+          button.disabled = !recordedVideoUrl;
+          $("#videoState").textContent = source.ended ? "Complete" : "Paused";
+          $("#videoState").classList.toggle("live", !source.ended);
+          if (source.ended) setMessage(`Video analysis complete · ${browserAnalysisFrames} frames analyzed.`);
+        } else {
+          button.textContent = sourceConnected ? "Resume live detection" : "Start live detection";
+          button.disabled = !browserStream;
+        }
+        if (!isRecordedVideo && sourceConnected) {
+          $("#feedState").textContent = "Preview";
+          $("#feedState").classList.remove("live");
+        }
+      }
+    }
+
+    function startBrowserAnalysis() {
+      lastBrowserInferenceAt = 0;
+      browserAnalysisFps = 0;
+      browserAnalysisFrames = 0;
+      return startFrameAnalysis(video, "camera");
+    }
+
+    function toggleBrowserAnalysis() {
+      if (!browserStream) return;
+      if (browserAnalysisActive) {
+        stopContinuousAnalysis("camera");
+        clearLiveOverlay();
+        $("#toggleLiveAnalysis").textContent = "Resume live detection";
+        $("#feedState").textContent = "Preview";
+        $("#feedState").classList.remove("live");
+        $("#feedHint").textContent = "Camera preview continues; inference is paused";
+        setMessage("Live detection paused. The camera preview is still running.");
+        return;
+      }
+      void startBrowserAnalysis();
+    }
+
+    function toggleVideoAnalysis() {
+      if (!recordedVideoUrl) return;
+      if (browserAnalysisActive && continuousAnalysisKind === "video") {
+        stopContinuousAnalysis("video");
+        $("#analyzeVideo").textContent = "Resume video analysis";
+        $("#videoState").textContent = "Paused";
+        $("#videoState").classList.remove("live");
+        setMessage("Video analysis paused. Use the video controls to seek or resume playback.");
+        return;
+      }
+      if (reviewVideo.ended) reviewVideo.currentTime = 0;
+      lastBrowserInferenceAt = 0;
+      browserAnalysisFps = 0;
+      browserAnalysisFrames = 0;
+      reviewVideo.play().catch(() => {});
+      void startFrameAnalysis(reviewVideo, "video");
+    }
+
+    imageTab.addEventListener("click", () => setMode("image"));
+    cameraTab.addEventListener("click", async () => {
+      setMode("camera");
+      await refreshDevices();
+    });
+    videoTab.addEventListener("click", () => setMode("video"));
+    sourceSelect.addEventListener("change", () => {
+      stopCamera();
+      updateSourceControls();
+    });
+    $("#connectCamera").addEventListener("click", connectCamera);
+    $("#stopCamera").addEventListener("click", () => {
+      stopCamera();
+      setMessage("Camera stopped. The browser camera track has been released.");
+    });
+    $("#toggleLiveAnalysis").addEventListener("click", toggleBrowserAnalysis);
+    $("#showRtspUrl").addEventListener("click", () => {
+      const input = $("#rtspUrl");
+      const reveal = input.type === "password";
+      input.type = reveal ? "text" : "password";
+      $("#showRtspUrl").textContent = reveal ? "Hide" : "Show";
+      $("#showRtspUrl").setAttribute("aria-pressed", String(reveal));
+    });
+    $("#refreshDevices").addEventListener("click", refreshDevices);
+    $("#cameraDevice").addEventListener("change", () => {
+      if (browserStream) {
+        stopCamera();
+        setMessage("Camera selection changed. Connect again to use the selected device.");
+      }
+    });
+
+    let queuedFrames = [];
+    fetch("/api/review-queue").then(readResponse).then((data) => {
+      queuedFrames = data.frames || [];
+      const select = $("#reviewQueue");
+      select.replaceChildren();
+      const placeholder = document.createElement("option");
+      placeholder.value = "";
+      placeholder.textContent = queuedFrames.length ? "Choose a frame to label" : "No queued frames";
+      select.append(placeholder);
+      for (const frame of queuedFrames) {
+        const option = document.createElement("option");
+        option.value = frame.id;
+        option.textContent = `${frame.sequence} · ${frame.timestamp_seconds.toFixed(1)} s · ${frame.width}×${frame.height}`;
+        select.append(option);
+      }
+    }).catch(() => { $("#reviewQueue").options[0].textContent = "Review queue unavailable"; });
+    $("#loadReviewFrame").addEventListener("click", async () => {
+      const frame = queuedFrames.find((item) => item.id === $("#reviewQueue").value);
+      if (!frame) return;
+      const button = $("#loadReviewFrame");
+      button.disabled = true;
+      try {
+        const response = await fetch(`/api/review-queue/${encodeURIComponent(frame.id)}`);
+        if (!response.ok) throw new Error("Could not load queued frame.");
+        const file = new File([await response.blob()], frame.filename, {type: "image/png"});
+        $("#annotationSequence").value = frame.sequence;
+        setMode("image");
+        await analyzeFile(file, frame.timestamp_seconds);
+      } catch (error) { setMessage(error.message, true); }
+      finally { button.disabled = false; }
+    });
+    const fileInput = $("#imageFile");
+    $("#chooseImage").addEventListener("click", () => fileInput.click());
+    fileInput.addEventListener("change", () => {
+      const file = fileInput.files[0];
+      $("#fileName").textContent = file ? file.name : "No image selected";
+      $("#runImage").disabled = !file;
+      $("#results").hidden = true;
+      $("#reviewTools").hidden = true;
+      $("#resolutionNote").hidden = true;
+      $("#imageStage").hidden = false;
+      latestResultData = null;
+      reviewSourceImage = null;
+      reviewRenderVersion += 1;
+      if (file) setMessage("Image selected. Analyze it when you’re ready.");
+    });
+    $("#runImage").addEventListener("click", () => analyzeFile(fileInput.files[0]));
+
+    const videoFileInput = $("#videoFile");
+    $("#chooseVideo").addEventListener("click", () => videoFileInput.click());
+    videoFileInput.addEventListener("change", () => {
+      const file = videoFileInput.files[0];
+      stopVideoAnalysis();
+      if (recordedVideoUrl) URL.revokeObjectURL(recordedVideoUrl);
+      recordedVideoUrl = null;
+      reviewVideo.pause();
+      reviewVideo.removeAttribute("src");
+      reviewVideo.load();
+      $("#videoFileName").textContent = file ? file.name : "No video selected";
+      $("#analyzeVideo").disabled = !file;
+      $("#videoEmpty").hidden = Boolean(file);
+      reviewVideo.hidden = !file;
+      $("#results").hidden = true;
+      $("#reviewTools").hidden = true;
+      $("#resolutionNote").hidden = true;
+      latestResultData = null;
+      reviewSourceImage = null;
+      reviewRenderVersion += 1;
+      if (!file) {
+        $("#videoSize").textContent = "— × —";
+        return;
+      }
+      if (!file.type.startsWith("video/") && !/\.(mp4|m4v|mov|webm)$/i.test(file.name)) {
+        $("#analyzeVideo").disabled = true;
+        return setMessage("Choose an MP4, MOV, M4V, or WebM video file.", true);
+      }
+      recordedVideoUrl = URL.createObjectURL(file);
+      reviewVideo.src = recordedVideoUrl;
+      reviewVideo.onloadedmetadata = () => {
+        $("#videoSize").textContent = `${reviewVideo.videoWidth} × ${reviewVideo.videoHeight} · ${formatDuration(reviewVideo.duration)}`;
+        setMessage("Video ready. Start analysis to inspect frames as it plays.");
+      };
+      reviewVideo.onerror = () => setMessage("This video format could not be played by the browser. Try MP4 (H.264) or WebM.", true);
+      $("#videoState").textContent = "Ready";
+      $("#videoHint").textContent = "Video stays in this browser; only frames go to the local app";
+    });
+    $("#analyzeVideo").addEventListener("click", toggleVideoAnalysis);
+    const overlayInputs = [
+      $("#showMotorcycles"), $("#showBicycles"), $("#showHelmet"),
+      $("#showNoHelmet"), $("#showUnknown"), $("#showNoMoto"),
+    ];
+    for (const input of overlayInputs) {
+      input.addEventListener("change", () => {
+        updateOverlayNotice();
+        drawReviewOverlay();
+        if (currentMode === "camera" && latestResultData) drawLiveOverlay(latestResultData);
+      });
+    }
+    $("#showAllOverlays").addEventListener("click", resetOverlayFilters);
+    window.addEventListener("pageshow", resetOverlayFilters, { once: true });
+    $("#displayConfidence").addEventListener("input", (event) => {
+      $("#displayConfidenceValue").textContent = `${event.currentTarget.value}%`;
+      updateOverlayNotice();
+      drawReviewOverlay();
+      if (currentMode === "camera" && latestResultData) drawLiveOverlay(latestResultData);
+    });
+    reviewVideo.addEventListener("loadedmetadata", () => {
+      if (Number.isFinite(reviewVideo.duration)) {
+        $("#videoSize").textContent = `${reviewVideo.videoWidth} × ${reviewVideo.videoHeight} · ${formatDuration(reviewVideo.duration)}`;
+      }
+    });
+    const dropZone = $("#dropZone");
+    for (const eventName of ["dragenter", "dragover"]) {
+      dropZone.addEventListener(eventName, (event) => {
+        event.preventDefault();
+        dropZone.classList.add("dragover");
+      });
+    }
+    for (const eventName of ["dragleave", "drop"]) {
+      dropZone.addEventListener(eventName, (event) => {
+        event.preventDefault();
+        dropZone.classList.remove("dragover");
+      });
+    }
+    dropZone.addEventListener("drop", (event) => {
+      const file = Array.from(event.dataTransfer.files).find((item) => item.type.startsWith("image/"));
+      if (!file) return setMessage("Drop a supported image file to continue.", true);
+      const transfer = new DataTransfer();
+      transfer.items.add(file);
+      fileInput.files = transfer.files;
+      fileInput.dispatchEvent(new Event("change", { bubbles: true }));
+    });
+
+    fetch("/api/health")
+      .then((response) => readResponse(response))
+      .then((data) => {
+        detectorAvailable = Boolean(data.detector_model_available);
+        $("#apiStatus").classList.remove("offline");
+        $("#apiStatus span").textContent = "Local API online";
+        if (data.detector_model_available) {
+          $("#modelStatus span").textContent = "Detector ready";
+          if (data.classifier_model_available || data.helmet_detector_model_available) {
+            $("#readinessTitle").textContent = "Detection pipeline ready";
+            $("#readinessText").textContent = "Motorbikes, riders, and visible helmet status are analyzed locally. Occluded or uncertain riders may remain UNKNOWN.";
+          } else {
+            $("#readinessTitle").textContent = "Detector ready · helmet model needed";
+            $("#readinessText").textContent = "People and bikes can be detected. Associated riders remain UNKNOWN until a trained helmet classifier is installed.";
+          }
+        } else {
+          $("#modelStatus span").textContent = "Detector not installed";
+          $("#readinessTitle").textContent = "Add a local detector model";
+          $("#readinessText").textContent = "Camera preview works now. Detection needs the YOLO checkpoint configured in this project.";
+        }
+      })
+      .catch(() => {
+        $("#apiStatus").classList.add("offline");
+        $("#apiStatus span").textContent = "Local API unavailable";
+        $("#readinessTitle").textContent = "Could not reach the app API";
+        $("#readinessText").textContent = "Refresh this page after starting the local app server.";
+      });
+
+    updateSourceControls();
+    refreshDevices();
+    refreshAnnotationCollection();
+    window.addEventListener("beforeunload", () => {
+      browserAnalysisController?.abort();
+      if (browserStream) browserStream.getTracks().forEach((track) => track.stop());
+      if (recordedVideoUrl) URL.revokeObjectURL(recordedVideoUrl);
+      if (annotationImageUrl) URL.revokeObjectURL(annotationImageUrl);
+    });
+  </script>
+</body>
+</html>
