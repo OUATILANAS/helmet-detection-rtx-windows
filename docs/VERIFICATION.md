@@ -1,6 +1,6 @@
 # Verification on 2026-10-11
 
-- 169 app and portable-workflow tests passed on the Mac.
+- 169 app and portable-workflow tests passed on the Mac, including a clean Git-tracked-files export after the evaluation-package fix. App and evaluation imports were verified to resolve inside that export.
 - New Python entrypoints passed Ruff and bytecode compilation.
 - The complete training preflight ran on CPU with real dense/sparse train/validation fixtures, finite losses and weights, checkpoint save/reload and inference. CPU preflight is explicitly rejected by the CUDA long-training gate.
 - Detector and complete-app evaluators returned identical scores when comparing a checkpoint against itself on the frozen 16 validation frames.
