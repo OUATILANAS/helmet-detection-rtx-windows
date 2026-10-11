@@ -23,7 +23,7 @@ nvidia-smi
 powershell -NoProfile -ExecutionPolicy Bypass -File windows/setup.ps1
 ```
 
-The repository is private: sign in to your GitHub account when Git prompts. Alternatively download its source ZIP while signed in.
+The repository is public. You can clone it or download its source ZIP without signing in.
 
 Setup installs CUDA PyTorch **2.9.1**, torchvision **0.24.1**, and Ultralytics **8.4.171** in `.venv`. PyTorch wheels include the CUDA runtime; a separate CUDA Toolkit installation is unnecessary for these commands. The setup checks CUDA availability and a real GPU backward pass. It stops if CUDA is unavailable. Version pins follow the [official Windows PyTorch installation table](https://pytorch.org/get-started/previous-versions/).
 
@@ -31,7 +31,7 @@ Use `.venv\Scripts\python.exe` directly; virtual-environment activation is unnec
 
 ## 2. Get the current data and weights
 
-Download **all three `helmet-windows-transfer.zip.part*` files** from this repository's private **[Windows transfer release](https://github.com/OUATILANAS/helmet-detection-rtx-windows/releases/tag/windows-transfer-v1)** while signed in. The approximately 2.2 GB archive is split to fit GitHub's per-file limit. It contains:
+Download **all three `helmet-windows-transfer.zip.part*` files** from this repository's **[Windows transfer release](https://github.com/OUATILANAS/helmet-detection-rtx-windows/releases/tag/windows-transfer-v1)**. The approximately 2.2 GB archive is split to fit GitHub's per-file limit. It contains:
 
 - `dataset/helmet/`: materialized EdgeVision images and labels, with the existing train/val/test split and portable YAML. No Mac symlinks or absolute Mac paths. Mathematically zero-area source boxes are removed and recorded in `LABEL-CLEANING.json`; valid annotations and split assignments stay unchanged.
 - `models/`: the eight checkpoints referenced by the Windows app profile, including the starting helmet localizer and classifier.
